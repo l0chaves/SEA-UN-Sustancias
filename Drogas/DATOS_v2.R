@@ -20,10 +20,10 @@ d <- d %>%
          -`D_08`, -`D_09`, -`D_10`) %>%
   mutate_all(as.character) %>%
   # se remplaza por "na" todos los no aplica
-  mutate(D_03 = case_when(D_01 == "2" ~  "na", TRUE ~ D_03),
-         D_04 = case_when(D_01 == "2" ~  "na", TRUE ~ D_04),
-         D_05 = case_when(D_01 == "2" ~  "0", TRUE ~ D_05),
-         D_07 = case_when(D_06 == "2" ~  "na", D_06 == "9" ~  "na", TRUE ~ D_07),
+  mutate(D_03 = case_when(!(D_02 == "1") ~  "na", TRUE ~ D_03),
+         D_04 = case_when(!(D_02 == "1") ~  "na", TRUE ~ D_04),
+         D_05 = case_when(!(D_02 == "1") ~  "0", TRUE ~ D_05),
+         D_07 = case_when(!(D_06 == "1") ~  "na", TRUE ~ D_07),
          D_12_A_A = case_when(D_12_A == "2" ~  "na", TRUE ~ D_12_A_A),
          D_12_B_A = case_when(D_12_B == "2" ~  "na", TRUE ~ D_12_B_A), 
          D_12_C_A = case_when(D_12_C == "2" ~  "na", TRUE ~ D_12_C_A)) %>%
@@ -32,9 +32,13 @@ colSums(is.na(d))
 
 d2 <- read_csv("Datos originales/d2_capitulos.csv")
 d2 <- d2 %>%
-  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`, -`D2_05_A`) %>%
   mutate_all(as.character) %>%
-  mutate(D2_04 = as.integer(D2_04))
+  left_join(personas_seleccionadas, by=c("DIRECTORIO"="DIRECTORIO")) %>%
+  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`, -`D2_05_A`) %>%
+  mutate(D2_04 = as.integer(D2_04),
+         EDAD = as.integer(EDAD),
+         D2_06 = case_when(!(EDAD > 18) ~  "na", TRUE ~ D2_06),
+         D2_07 = case_when(!(EDAD > 18) ~  "na", TRUE ~ D2_07))
 colSums(is.na(d2))
 
 encuestas <- read_csv("Datos originales/encuestas.csv")
@@ -74,15 +78,20 @@ C_e <- read_csv("Datos originales/e_capitulos.csv")
 C_e <- C_e %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
   mutate_all(as.character) %>%
-  filter(E_01 == "1", 
-         E_10 == "1") %>%
+  #Solo se tienen en cuenta los que han fumado cigarrillos o cigarrillos electrónicos
+  filter(E_01 == "1" | E_10 == "1") %>%
   #se remplaza por "na" todos los no aplica
-  mutate(E_05 = case_when(!(E_04 == "1") ~ "na", TRUE ~ E_05),
+  mutate(E_02 = case_when(!(E_01 == "1") ~ "na", TRUE ~ E_02),
+         E_03 = case_when(!(E_01 == "1") ~ "na", TRUE ~ E_03),
+         E_04 = case_when(!(E_01 == "1") ~ "na", TRUE ~ E_04),
+         E_05 = case_when(!(E_04 == "1") ~ "na", TRUE ~ E_05),
          E_06 = case_when(!(E_05 == "1") ~ "na", TRUE ~ E_06),
          E_07 = case_when(!(E_05 == "1") ~ "na", TRUE ~ E_07),
          E_08 = case_when(!(E_07 == "1") ~ "na", TRUE ~ E_08),
-         E_09 = case_when(!(E_08 == "1") ~ "na", TRUE ~ E_09))
-  
+         E_09 = case_when(!(E_08 == "1") ~ "na", TRUE ~ E_09),
+         E_11 = case_when(!(E_10 == "1") ~ "na", TRUE ~ E_11),
+         E_12 = case_when(!(E_10 == "1") ~ "na", TRUE ~ E_12))
+
 colSums(is.na(C_e))
 
 #### F - Alcohol ----
@@ -90,11 +99,13 @@ C_f <- read_csv("Datos originales/f_capitulos.csv")
 C_f <- C_f %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
   mutate_all(as.character) %>%
+  #se toman en cuenta solo los que han tomado alcohol
   filter(F_03 == "1") %>%
   #se remplaza por "na" todos los no aplica
   mutate(F_01_CUAL = case_when(F_01 == "2" ~  "na", TRUE ~ F_01_CUAL),
          F_02_CUAL = case_when(F_02 == "2" ~  "na", TRUE ~ F_02_CUAL),
          F_07 = case_when(!(F_06 == "1") ~ "na", TRUE ~ F_07),
+         #para que la variable quede numérica se pone en vez de "na", no hay 0 en la variable original.
          F_08 = case_when(!(F_07 == "1") ~ "0", TRUE ~ F_08),
          F_09 = case_when(!(F_07 == "1") ~ "0", TRUE ~ F_09),
          F_10_A = case_when(!(F_07 == "1") ~ "na", TRUE ~ F_10_A),
@@ -115,9 +126,9 @@ C_f <- C_f %>%
          F_17 = case_when(!(F_06 == "1") ~ "na", F_14 == "1" ~  "na", TRUE ~ F_17),
          F_18 = case_when(!(F_06 == "1") ~ "na", F_14 == "1" ~  "na", TRUE ~ F_18),
          F_19 = case_when(!(F_06 == "1") ~ "na", F_14 == "1" ~  "na", TRUE ~ F_19),
-         F_20 = case_when(!(F_06 == "1") ~ "na", F_14 == "1" ~  "na", TRUE ~ F_20),
+         F_20 = case_when(!(F_06 == "1") ~ "na", TRUE ~ F_20),
          F_20_CUAL = case_when(!(F_20 == "1") ~  "na", TRUE ~ F_20_CUAL),
-         F_21 = case_when(!(F_06 == "1") ~ "na", F_14 == "1" ~  "na", TRUE ~ F_21),
+         F_21 = case_when(!(F_06 == "1") ~ "na", TRUE ~ F_21),
          F_21_CUAL = case_when(!(F_21 == "1") ~  "na", TRUE ~ F_21_CUAL)) %>%
   mutate(F_08 = as.integer(F_08),
          F_09 = as.integer(F_09))
@@ -134,8 +145,10 @@ C_g <- C_g %>%
          -`G_07`, -`G_08_A`, -`G_08_B`, -`G_08_C`, -`G_08_D`, -`G_08_E`, -`G_08_F`, 
          -`G_08_G`, -`G_09`, -`G_10`) %>%
   mutate_all(as.character) %>%
-  mutate(# "Y" mira que lo haya probado al menos una vez en la vida
-          Y = case_when(G_11_A == "1" ~ "1", G_11_B == "1" ~ "1", G_11_C == "1" ~ "1", 
+  # se une el alcohol para responder las preguntas G_12 a G_14
+  left_join(C_f[, c("DIRECTORIO", "F_03")], by = c("DIRECTORIO" = "DIRECTORIO")) %>%
+  #"Y" mira que lo haya probado al menos una vez en la vida: "1" si, "2" no. 
+  mutate(Y = case_when(G_11_A == "1" ~ "1", G_11_B == "1" ~ "1", G_11_C == "1" ~ "1", 
                         G_11_D == "1" ~ "1", G_11_E == "1" ~ "1", G_11_F == "1" ~ "1", 
                         G_11_G == "1" ~ "1", G_11_H == "1" ~ "1", G_11_I == "1" ~ "1", 
                         G_11_J == "1" ~ "1", G_11_K == "1" ~ "1", G_11_L == "1" ~ "1", 
@@ -143,6 +156,7 @@ C_g <- C_g %>%
                         G_11_P == "1" ~ "1", G_11_Q == "1" ~ "1", G_11_R == "1" ~ "1", 
                         G_11_S == "1" ~ "1", G_11_T == "1" ~ "1", G_11_U == "1" ~ "1",
                         G_11_V == "1" ~ "1", TRUE ~ "2"),
+         #para que la variable quede numérica se pone en vez de "na", no hay 0 en la variable original.
           G_11_A_ANIOS = case_when(G_11_A == "2" ~ "0", TRUE ~ G_11_A_ANIOS),
           G_11_B_ANIOS = case_when(G_11_B == "2" ~ "0", TRUE ~ G_11_B_ANIOS),
           G_11_C_ANIOS = case_when(G_11_C == "2" ~ "0", TRUE ~ G_11_C_ANIOS),
@@ -165,16 +179,16 @@ C_g <- C_g %>%
           G_11_T_ANIOS = case_when(G_11_T == "2" ~ "0", TRUE ~ G_11_T_ANIOS),
           G_11_U_ANIOS = case_when(G_11_U == "2" ~ "0", TRUE ~ G_11_U_ANIOS),
           G_11_V_ANIOS = case_when(G_11_V == "2" ~ "0", TRUE ~ G_11_V_ANIOS),
-          G_12_A = case_when(Y == "2" ~ "na", TRUE ~ G_12_A),
-          G_12_B = case_when(Y == "2" ~ "na", TRUE ~ G_12_B),
-          G_12_C = case_when(Y == "2" ~ "na", TRUE ~ G_12_C),
-          G_12_D = case_when(Y == "2" ~ "na", TRUE ~ G_12_D),
-          G_12_E = case_when(Y == "2" ~ "na", TRUE ~ G_12_E),
-          G_12_F = case_when(Y == "2" ~ "na", TRUE ~ G_12_F),
-          G_12_G = case_when(Y == "2" ~ "na", TRUE ~ G_12_G),
-          G_12_H = case_when(Y == "2" ~ "na", TRUE ~ G_12_H),
-          G_12_I = case_when(Y == "2" ~ "na", TRUE ~ G_12_I),
-          G_12_J = case_when(Y == "2" ~ "na", TRUE ~ G_12_J), 
+          G_12_A = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_A),
+          G_12_B = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_B),
+          G_12_C = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_C),
+          G_12_D = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_D),
+          G_12_E = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_E),
+          G_12_F = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_F),
+          G_12_G = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_G),
+          G_12_H = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_H),
+          G_12_I = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_I),
+          G_12_J = case_when(Y == "2" ~ "na", !(F_03 == "1") ~ "na", TRUE ~ G_12_J), 
           G_13 = case_when(!(G_12_A == "1"|G_12_B == "1"|G_12_C == "1"|G_12_D == "1"|
                              G_12_E == "1"|G_12_F == "1"|G_12_G == "1"|G_12_H == "1"|
                              G_12_I == "1"|G_12_J == "1") ~ "na", TRUE ~ G_13),
@@ -195,41 +209,43 @@ C_g <- C_g %>%
          G_11_O_ANIOS = as.integer(G_11_O_ANIOS), G_11_P_ANIOS = as.integer(G_11_P_ANIOS),
          G_11_Q_ANIOS = as.integer(G_11_Q_ANIOS), G_11_R_ANIOS = as.integer(G_11_R_ANIOS),
          G_11_S_ANIOS = as.integer(G_11_S_ANIOS), G_11_T_ANIOS = as.integer(G_11_T_ANIOS),
-         G_11_U_ANIOS = as.integer(G_11_U_ANIOS), G_11_V_ANIOS = as.integer(G_11_V_ANIOS))
+         G_11_U_ANIOS = as.integer(G_11_U_ANIOS), G_11_V_ANIOS = as.integer(G_11_V_ANIOS)) %>%
+  select(-`F_03`)
 
 colSums(is.na(C_g))
 
 
 #### H - Tranquilizantes ----
-table(C_g$G_11_A)
+table(C_g$G_11_A) 
 
 C_h <- read_csv("Datos originales/h_capitulos.csv")
 C_h <- C_h %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
   mutate_all(as.character) %>%
-  mutate(H_02_A = replace_na(H_02_A, "0"),
-         H_02_A = replace_na(H_02_A, "0"),
-         H_02_B = replace_na(H_02_B, "0"),
-         H_02_C = replace_na(H_02_C, "0"),
-         H_02_D = replace_na(H_02_D, "0"),
-         H_02_E = replace_na(H_02_E, "0"),
-         H_02_F = replace_na(H_02_F, "0"),
-         H_02_G = replace_na(H_02_G, "0"),
-         H_02_H = replace_na(H_02_H, "0"),
-         H_02_I = replace_na(H_02_I, "0"),
+  # Solo se marca cuando respondieron "1":si se pone "2" para no
+  mutate(H_02_A = replace_na(H_02_A, "2"),
+         H_02_B = replace_na(H_02_B, "2"),
+         H_02_C = replace_na(H_02_C, "2"),
+         H_02_D = replace_na(H_02_D, "2"),
+         H_02_E = replace_na(H_02_E, "2"),
+         H_02_F = replace_na(H_02_F, "2"),
+         H_02_G = replace_na(H_02_G, "2"),
+         H_02_H = replace_na(H_02_H, "2"),
+         H_02_I = replace_na(H_02_I, "2"),
          H_04 = case_when(!(H_03 == "1") ~ "na", TRUE ~ H_04),
          H_05 = case_when(!(H_04 == "1") ~ "0", TRUE ~ H_05),
-         H_06_A = case_when(!(H_04 == "1") ~ "na", is.na(H_06_A) ~ "0", TRUE ~ H_06_A),
-         H_06_B = case_when(!(H_04 == "1") ~ "na", is.na(H_06_B) ~ "0", TRUE ~ H_06_B),
-         H_06_C = case_when(!(H_04 == "1") ~ "na", is.na(H_06_C) ~ "0", TRUE ~ H_06_C),
-         H_06_D = case_when(!(H_04 == "1") ~ "na", is.na(H_06_D) ~ "0", TRUE ~ H_06_D),
-         H_06_E = case_when(!(H_04 == "1") ~ "na", is.na(H_06_E) ~ "0",  TRUE ~ H_06_E),
-         H_06_F = case_when(!(H_04 == "1") ~ "na", is.na(H_06_F) ~ "0", TRUE ~ H_06_F),
-         H_06_G = case_when(!(H_04 == "1") ~ "na", is.na(H_06_G) ~ "0", TRUE ~ H_06_G),
-         H_06_H = case_when(!(H_04 == "1") ~ "na", is.na(H_06_H) ~ "0", TRUE ~ H_06_H),
-         H_06_I = case_when(!(H_04 == "1") ~ "na", is.na(H_06_I) ~ "0", TRUE ~ H_06_I),
-         H_06_J = case_when(!(H_04 == "1") ~ "na", is.na(H_06_J) ~ "0", TRUE ~ H_06_J),
-         H_06_K = case_when(!(H_04 == "1") ~ "na", is.na(H_06_K) ~ "0", TRUE ~ H_06_K),
+         # Solo se marca cuando respondieron "1":si se pone "2" para no
+         H_06_A = case_when(!(H_04 == "1") ~ "na", is.na(H_06_A) ~ "2", TRUE ~ H_06_A),
+         H_06_B = case_when(!(H_04 == "1") ~ "na", is.na(H_06_B) ~ "2", TRUE ~ H_06_B),
+         H_06_C = case_when(!(H_04 == "1") ~ "na", is.na(H_06_C) ~ "2", TRUE ~ H_06_C),
+         H_06_D = case_when(!(H_04 == "1") ~ "na", is.na(H_06_D) ~ "2", TRUE ~ H_06_D),
+         H_06_E = case_when(!(H_04 == "1") ~ "na", is.na(H_06_E) ~ "2", TRUE ~ H_06_E),
+         H_06_F = case_when(!(H_04 == "1") ~ "na", is.na(H_06_F) ~ "2", TRUE ~ H_06_F),
+         H_06_G = case_when(!(H_04 == "1") ~ "na", is.na(H_06_G) ~ "2", TRUE ~ H_06_G),
+         H_06_H = case_when(!(H_04 == "1") ~ "na", is.na(H_06_H) ~ "2", TRUE ~ H_06_H),
+         H_06_I = case_when(!(H_04 == "1") ~ "na", is.na(H_06_I) ~ "2", TRUE ~ H_06_I),
+         H_06_J = case_when(!(H_04 == "1") ~ "na", is.na(H_06_J) ~ "2", TRUE ~ H_06_J),
+         H_06_K = case_when(!(H_04 == "1") ~ "na", is.na(H_06_K) ~ "2", TRUE ~ H_06_K),
          H_07 = case_when(!(H_04 == "1") ~ "na", TRUE ~ H_07),
          H_07_A = case_when(!(H_07 == "1") ~ "na", TRUE ~ H_07_A),
          H_07_B = case_when(!(H_07 == "1") ~ "na", TRUE ~ H_07_B),
@@ -239,7 +255,78 @@ C_h <- C_h %>%
   mutate(H_05 = as.integer(H_05))
 
 colSums(is.na(C_h))
-         
+
+#### I - Estimulantes  ----
+table(C_g$G_11_B)
+
+C_i <- read_csv("Datos originales/i_capitulos.csv")
+C_i <- C_i %>%
+  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
+  mutate_all(as.character) %>%
+  # Solo se marca cuando respondieron "1":si se pone "2" para no
+  mutate(I_02_A = replace_na(I_02_A, "2"),
+         I_02_B = replace_na(I_02_B, "2"),
+         I_02_C = replace_na(I_02_C, "2"),
+         I_02_D = replace_na(I_02_D, "2"),
+         I_02_E = replace_na(I_02_E, "2"),
+         I_02_F = replace_na(I_02_F, "2"),
+         I_02_G = replace_na(I_02_G, "2"),
+         I_02_H = replace_na(I_02_H, "2"),
+         I_02_I = replace_na(I_02_I, "2"),
+         I_04 = case_when(!(I_03 == "1") ~ "na", TRUE ~ I_04),
+         I_05 = case_when(!(I_04 == "1") ~ "na", TRUE ~ I_05),
+         I_06_A = case_when(!(I_04 == "1") ~ "na", is.na(I_06_A) ~ "2", TRUE ~ I_06_A),
+         I_06_B = case_when(!(I_04 == "1") ~ "na", is.na(I_06_B) ~ "2", TRUE ~ I_06_B),
+         I_06_C = case_when(!(I_04 == "1") ~ "na", is.na(I_06_C) ~ "2", TRUE ~ I_06_C),
+         I_07 = case_when(!(I_04 == "1") ~ "na", TRUE ~ I_07),
+         I_07_A = case_when(!(I_07 == "1") ~ "na", is.na(I_07_A) ~ "2", TRUE ~ I_07_A),
+         I_07_B = case_when(!(I_07 == "1") ~ "na", is.na(I_07_B) ~ "2", TRUE ~ I_07_B),
+         I_07_C = case_when(!(I_07 == "1") ~ "na", is.na(I_07_C) ~ "2", TRUE ~ I_07_C),
+         I_07_D = case_when(!(I_07 == "1") ~ "na", is.na(I_07_D) ~ "2", TRUE ~ I_07_D),
+         I_07_E = case_when(!(I_07 == "1") ~ "na", is.na(I_07_E) ~ "2", TRUE ~ I_07_E))
+  
+  
+colSums(is.na(C_i))
+
+#### J - Inhalables  ----
+table(C_g$G_11_C) #Todos (1)
+table(C_g$G_11_D) #Dick
+table(C_g$G_11_E) #Popper
+
+C_j <- read_csv("Datos originales/j_capitulos.csv")
+
+C_j_1 <- C_j %>%
+  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
+  mutate_all(as.character) %>%
+  left_join(C_g[, c("DIRECTORIO", "G_11_C")], by = c("DIRECTORIO" = "DIRECTORIO")) %>%
+  filter(G_11_C == "1") %>%
+  mutate(J_01 == case_when(!(G_11_C == "1") ~ "na", TRUE ~ J_01),
+         J_02 == case_when(!(G_11_C == "1") ~ "na", TRUE ~ J_02),
+         J_03 == case_when((J_02 == "2") ~ "na", TRUE ~ J_03),
+         J_04 == case_when((J_02 == "2") ~ "na", TRUE ~ J_04),
+         J_05_A = case_when(!(J_02 == "1") ~ "na", is.na(J_05_A) ~ "2", TRUE ~ J_05_A),
+         J_05_B = case_when(!(J_02 == "1") ~ "na", is.na(J_05_B) ~ "2", TRUE ~ J_05_B),
+         J_05_C = case_when(!(J_02 == "1") ~ "na", is.na(J_05_C) ~ "2", TRUE ~ J_05_C),
+         J_05_D = case_when(!(J_02 == "1") ~ "na", is.na(J_05_D) ~ "2", TRUE ~ J_05_D),
+         J_05_E = case_when(!(J_02 == "1") ~ "na", is.na(J_05_E) ~ "2", TRUE ~ J_05_E),
+         J_05_F = case_when(!(J_02 == "1") ~ "na", is.na(J_05_F) ~ "2", TRUE ~ J_05_F),
+         J_05_A = case_when(!(J_02 == "1") ~ "na", is.na(J_06_A) ~ "2", TRUE ~ J_06_A),
+         J_06_B = case_when(!(J_02 == "1") ~ "na", is.na(J_06_B) ~ "2", TRUE ~ J_06_B),
+         J_06_C = case_when(!(J_02 == "1") ~ "na", is.na(J_06_C) ~ "2", TRUE ~ J_06_C),
+         J_06_D = case_when(!(J_02 == "1") ~ "na", is.na(J_06_D) ~ "2", TRUE ~ J_06_D),
+         J_06_E = case_when(!(J_02 == "1") ~ "na", is.na(J_06_E) ~ "2", TRUE ~ J_06_E),
+         J_06_F = case_when(!(J_02 == "1") ~ "na", is.na(J_06_F) ~ "2", TRUE ~ J_06_F),
+         J_06_G = case_when(!(J_02 == "1") ~ "na", is.na(J_06_F) ~ "2", TRUE ~ J_06_G),
+         J_06_H = case_when(!(J_02 == "1") ~ "na", is.na(J_06_F) ~ "2", TRUE ~ J_06_H),
+         J_06_I = case_when(!(J_02 == "1") ~ "na", is.na(J_06_F) ~ "2", TRUE ~ J_06_I))
+colSums(is.na(C_j_1))
+C_j_2 <- C_j %>%
+  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
+  mutate_all(as.character) %>%
+  left_join(C_g[, c("DIRECTORIO", "G_11_D")], by = c("DIRECTORIO" = "DIRECTORIO")) %>%
+
+
+
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 
