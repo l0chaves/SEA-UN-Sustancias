@@ -68,7 +68,7 @@ entorno <- entorno %>%
          `G_06_A`, `G_06_B`, `G_06_C`, `G_06_D`, `G_06_E`, `G_06_F`, `G_06_G`, 
          `G_06_H`, `G_06_I`, `G_06_J`, `G_06_K`, `G_06_L`, `G_06_M`, `G_06_N`,
          `G_07`, `G_08_A`, `G_08_B`, `G_08_C`, `G_08_D`, `G_08_E`, `G_08_F`, 
-         `G_08_G`, `G_09`, `G_10`)
+         `G_08_G`, `G_09`, `G_10`, `DIRECTORIO`)
 
 colSums(is.na(entorno))
 
@@ -323,7 +323,7 @@ colSums(is.na(C_j_1))
 C_j_2 <- C_j %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
   mutate_all(as.character) %>%
-  left_join(C_g[, c("DIRECTORIO", "G_11_D")], by = c("DIRECTORIO" = "DIRECTORIO")) %>%
+  left_join(C_g[, c("DIRECTORIO", "G_11_D")], by = c("DIRECTORIO" = "DIRECTORIO"))
 
 
 
@@ -342,22 +342,12 @@ DF_ilicitas <- personas_seleccionadas %>%
   left_join(d,by=c("DIRECTORIO"="DIRECTORIO")) %>%
   left_join(d2,by=c("DIRECTORIO"="DIRECTORIO")) %>%
   left_join(encuestas,by=c("DIRECTORIO"="DIRECTORIO")) %>%
-  left_join(entorno,by=c("DIRECTORIO"="DIRECTORIO")) %>%
-  select(-`G_11_A`, -`G_11_B`, -`G_11_C`, -`G_11_D`, -`G_11_E`, -`G_11_F`, -`G_11_G`,
-         -`G_11_H`, -`G_11_I`, -`G_11_J`, -`G_11_K`, -`G_11_L`, -`G_11_M`, -`G_11_N`, 
-         -`G_11_O`, -`G_11_P`, -`G_11_Q`, -`G_11_R`, -`G_11_S`, -`G_11_T`, -`G_11_U`, -`G_11_V`,
-         -`G_11_A_ANIOS`, -`G_11_B_ANIOS`, -`G_11_C_ANIOS`, -`G_11_D_ANIOS`, -`G_11_E_ANIOS`, 
-         -`G_11_F_ANIOS`, -`G_11_G_ANIOS`, -`G_11_H_ANIOS`, -`G_11_I_ANIOS`, -`G_11_J_ANIOS`,
-         -`G_11_K_ANIOS`, -`G_11_L_ANIOS`, -`G_11_M_ANIOS`, -`G_11_N_ANIOS`, -`G_11_O_ANIOS`, 
-         -`G_11_P_ANIOS`, -`G_11_Q_ANIOS`, -`G_11_R_ANIOS`, -`G_11_S_ANIOS`, -`G_11_T_ANIOS`,
-         -`G_11_U_ANIOS`, -`G_11_V_ANIOS`, -`G_10`,
-         -`G_12_A`, -`G_12_B`, -`G_12_C`, -`G_12_D`, -`G_12_E`, -`G_12_F`, -`G_12_G`, -`G_12_H`, -`G_12_I`, -`G_12_J`,
-         -`G_13`, -`G_14_A`, -`G_14_B`, -`G_14_C`, -`G_14_D`, -`G_14_E`, -`G_14_F`, -`G_14_G`)
+  left_join(entorno,by=c("DIRECTORIO"="DIRECTORIO"))
 
 prop.table(table(DF_ilicitas$Y))
 
 #### categóricas mutuamente excluyentes ----
-Tipo_consumo <- entorno %>%
+Tipo_consumo <- C_g %>%
   filter(Y == "1") %>%
   select(DIRECTORIO, A = `G_11_A`, B = `G_11_B`, C = `G_11_C`, D = `G_11_D`, 
          E = `G_11_E`, `F` = `G_11_F`, G = `G_11_G`, H = `G_11_H`, I = `G_11_I`,
@@ -379,7 +369,5 @@ categorias_por_individuo <- apply(Tipo_consumo[, -1], 1, obtener_categorias)
 categorias_por_individuo_edit <- as.data.frame(cbind(DIRECTORIO =Tipo_consumo$DIRECTORIO,
                                                 categorias = categorias_por_individuo,
                                                 cantidad = str_count(categorias_por_individuo, ",")+1))
-categorias_por_individuo_edit <- categorias_por_individuo %>%
-  mutate_at(vars(-1), ~gsub(".*G_11_.*", "", .))
 
-categorias <- unique(categorias_por_individuo$categorias_por_individuo)
+categorias <- unique(categorias_por_individuo)
