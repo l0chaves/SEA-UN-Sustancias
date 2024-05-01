@@ -5,7 +5,7 @@ library("tidyr")
 
 # CARGA Y LIMPIEZA DE LAS TABLAS ----
 
-       ## Básicos ----
+## Básicos ----
 personas <- read_csv("Datos originales/personas.csv")
 
 personas_seleccionadas <- read_csv("Datos originales/personas_seleccionadas.csv")
@@ -556,7 +556,7 @@ C_n <- C_n %>%
          N_10_F = replace_na(N_10_F, "2"),
          N_10_G = replace_na(N_10_G, "2"),
          N_10_H = replace_na(N_10_H, "2"),
-         N_10_I = replace_na(N_10_I, "2"),)
+         N_10_I = replace_na(N_10_I, "2"))
 
 colSums(is.na(C_n))
 
@@ -564,18 +564,84 @@ colSums(is.na(C_n))
 table(C_g$G_11_J)
 
 C_o <- read_csv("Datos originales/o_capitulos.csv")
-colSums(is.na(C_o))
-
-C_oa <- C_o %>%
+C_o <- C_o %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
   mutate_all(as.character) %>%
   mutate(O_03 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_03),
          O_04_A = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_04_A),
+         O_04_A = replace_na(O_04_A, "2"),
          O_04_B = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_04_B),
+         O_04_B = replace_na(O_04_B, "2"),
          O_04_C = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_04_C),
+         O_04_C = replace_na(O_04_C, "2"),
          O_04_D = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_04_D),
-         O_04_FUMADA = case_when(!(O_04_A == "1") ~ "na", TRUE ~ O_04_FUMADA), )
-  
+         O_04_D = replace_na(O_04_D, "2"),
+         O_04_FUMADA = case_when(!(O_04_A == "1") ~ "na", TRUE ~ O_04_FUMADA),
+         O_05 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_05),
+         O_06 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_06),
+         O_07 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_07),
+         O_08 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_08),
+         O_09 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_09),
+         O_09_VALOR = case_when(!(O_09 == "1") ~ "na", TRUE ~ O_09_VALOR),
+         O_09_TEXTO = case_when(!(O_09 == "1") ~ "na", TRUE ~ O_09_TEXTO),
+         O_10_A = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_A),
+         O_10_B = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_B),
+         O_10_C = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_C),
+         O_10_D = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_D),
+         O_10_E = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_E),
+         O_10_F = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_F),
+         O_10_G = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_G),
+         O_10_H = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_H),
+         O_10_I = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_I),
+         O_10_A = replace_na(O_10_A, "2"),
+         O_10_B = replace_na(O_10_B, "2"),
+         O_10_C = replace_na(O_10_C, "2"),
+         O_10_D = replace_na(O_10_D, "2"),
+         O_10_E = replace_na(O_10_E, "2"),
+         O_10_F = replace_na(O_10_F, "2"),
+         O_10_G = replace_na(O_10_G, "2"),
+         O_10_H = replace_na(O_10_H, "2"),
+         O_10_I = replace_na(O_10_I, "2"))
+
+colSums(is.na(C_o))
+
+#### P - Otras  ----
+C_p <- read_csv("Datos originales/p_capitulos.csv")
+colSums(is.na(C_p))
+
+# ANALGÉSICOS OPIOIDES
+table(C_g$G_11_M)
+C_p1 <- C_p %>%
+  select(`P_01`, `P_02`, `DIRECTORIO`, `SECUENCIA_ENCUESTA`, `SECUENCIA_P`, `ORDEN`) %>%
+  mutate_all(as.character) %>%
+  left_join(C_g[, c("DIRECTORIO", "G_11_M")], by = c("DIRECTORIO" = "DIRECTORIO")) %>%
+  filter(G_11_M == "1") %>%
+  mutate(P_02 = case_when(!(P_01 == "1") ~ "na", TRUE ~ P_02)) %>%
+  select(-`G_11_M`)
+colSums(is.na(C_p1))
+
+# LSD
+table(C_g$G_11_N)
+C_p2 <- C_p %>%
+  select(`P_03`, `P_04`, `DIRECTORIO`, `SECUENCIA_ENCUESTA`, `SECUENCIA_P`, `ORDEN`) %>%
+  mutate_all(as.character) %>%
+  left_join(C_g[, c("DIRECTORIO", "G_11_N")], by = c("DIRECTORIO" = "DIRECTORIO")) %>%
+  filter(G_11_N == "1") %>%
+  mutate(P_04 = case_when(!(P_03 == "1") ~ "na", TRUE ~ P_04)) %>%
+  select(-`G_11_N`)
+colSums(is.na(C_p2))
+
+# HONGOS - YAGE - CACAO SABANERO
+table(C_g$G_11_O); table(C_g$G_11_P); table(C_g$G_11_Q)
+C_p3 <- C_p %>%
+  select(`P_05`, `P_06`, `DIRECTORIO`, `SECUENCIA_ENCUESTA`, `SECUENCIA_P`, `ORDEN`) %>%
+  mutate_all(as.character) %>%
+  left_join(C_g[, c("DIRECTORIO", "G_11_O", "G_11_P", "G_11_Q")], by = c("DIRECTORIO" = "DIRECTORIO")) %>%
+  filter(G_11_O == "1" | G_11_P == "1" | G_11_Q == "1") %>%
+  mutate(P_06 = case_when(!(P_05 == "1") ~ "na", TRUE ~ P_06)) %>%
+  select(-`G_11_O`, -`G_11_P`, -`G_11_Q`)
+colSums(is.na(C_p3))
+
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 
