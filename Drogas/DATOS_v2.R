@@ -1,9 +1,11 @@
+rm(list=ls())
 library("readr")
 library("dplyr")
 library("stringr")
 
 # CARGA Y LIMPIEZA DE LAS TABLAS ----
 ## Basicos ----
+setwd("C:/Users/jufem/OneDrive/Documentos/Semillero SEA/SEMILLERO-SEA-UNAL_Juan")
 personas <- read_csv("Drogas/Datos originales/personas.csv")
 
 personas_seleccionadas <- read_csv("Drogas/Datos originales/personas_seleccionadas.csv")
@@ -11,7 +13,8 @@ personas_seleccionadas <- personas_seleccionadas %>%
   select(DIRECTORIO, SEXO, EDAD, PARENTESCO) %>%
   mutate_all(as.character) %>%
   mutate(EDAD = as.integer(EDAD))
-
+personas_seleccionadas$grupo_edad <- cut(personas_seleccionadas$EDAD, breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100), labels = c("10-20", "20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80-90", "90-100"))
+#personas_seleccionadas$PARENTESCO <- factor(personas_seleccionadas$PARENTESCO, levels = names(sort(table(personas_seleccionadas$PARENTESCO), decreasing = TRUE)))
 d <- read_csv("Drogas/Datos originales/d_capitulos.csv")
 d <- d %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`,
@@ -124,11 +127,10 @@ obtener_categorias <- function(fila) {
 
 categorias_por_individuo <- apply(Tipo_consumo[, -1], 1, obtener_categorias)
 categorias_por_individuo_edit <- as.data.frame(cbind(DIRECTORIO =Tipo_consumo$DIRECTORIO,
-                                                categorias = categorias_por_individuo,
-                                                cantidad = str_count(categorias_por_individuo, ",")+1))
-categorias_por_individuo_edit <- categorias_por_individuo %>%
+                                                     categorias = categorias_por_individuo,
+                                                     cantidad = str_count(categorias_por_individuo, ",")+1))
+
+categorias_por_individuo_edit <- categorias_por_individuo_edit %>%
   mutate_at(vars(-1), ~gsub(".*G_11_.*", "", .))
 
-categorias <- unique(categorias_por_individuo$categorias_por_individuo)
-
-# ACM / cluster ----
+categorias <- unique(categorias_por_individuo)
