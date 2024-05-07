@@ -14,6 +14,7 @@ personas_seleccionadas <- personas_seleccionadas %>%
   mutate_all(as.character) %>%
   mutate(EDAD = as.integer(EDAD))
 
+### Socio-Demográficas ----
 d <- read_csv("Datos originales/d_capitulos.csv")
 d <- d %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`,
@@ -48,6 +49,7 @@ encuestas <- encuestas %>%
   mutate(TOTAL_PERSONAS = as.integer(TOTAL_PERSONAS))
 colSums(is.na(encuestas))
 
+### Entorno ----
 entorno <- read_csv("Datos originales/g_capitulos.csv")
 entorno <- entorno %>%
   select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
@@ -72,6 +74,31 @@ entorno <- entorno %>%
 
 colSums(is.na(entorno))
 
+### Tratamiento ----
+tratamiento <- read_csv("Datos originales/q_capitulos.csv")
+tratamiento <- tratamiento %>%
+  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`, -`Q_01_E`) %>%
+  mutate_all(as.character) %>%
+  mutate(Q_01_A = replace_na(Q_01_A, "2"),
+         Q_01_B = replace_na(Q_01_B, "2"),
+         Q_01_C = replace_na(Q_01_C, "2"),
+         Q_01_D = replace_na(Q_01_D, "2"),
+         Q_03 = case_when(!(Q_02 == "1") ~ "na", TRUE ~ Q_03),
+         Q_04 = case_when(!(Q_03 == "1" | Q_03 == "2" | Q_03 == "3") ~ "na", TRUE ~ Q_04))
+
+colSums(is.na(tratamiento))
+
+### Trabajo ----
+trabajo <- read_csv("Datos originales/r_capitulos.csv")
+trabajo <- trabajo %>%
+  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
+  mutate_all(as.character) %>%
+  mutate(R_02 = case_when(!(R_01 == "1") ~ "na", TRUE ~ R_02),
+         R_04 = case_when((R_03 == "0") ~ "na", TRUE ~ R_04))
+colSums(is.na(trabajo))
+
+# ---------------------------------------------------------------------------- #
+
 ## Específicos ----
 #### E - Tabaco ----
 C_e <- read_csv("Datos originales/e_capitulos.csv")
@@ -81,16 +108,21 @@ C_e <- C_e %>%
   #Solo se tienen en cuenta los que han fumado cigarrillos o cigarrillos electrónicos
   filter(E_01 == "1" | E_10 == "1") %>%
   #se remplaza por "na" todos los no aplica
-  mutate(E_02 = case_when(!(E_01 == "1") ~ "na", TRUE ~ E_02),
+  #para que la variable quede numérica se pone en vez de "na", no hay 0 en la variable original.
+  mutate(E_02 = case_when(!(E_01 == "1") ~ "0", TRUE ~ E_02),  #num
          E_03 = case_when(!(E_01 == "1") ~ "na", TRUE ~ E_03),
          E_04 = case_when(!(E_01 == "1") ~ "na", TRUE ~ E_04),
          E_05 = case_when(!(E_04 == "1") ~ "na", TRUE ~ E_05),
-         E_06 = case_when(!(E_05 == "1") ~ "na", TRUE ~ E_06),
+         E_06 = case_when(!(E_05 == "1") ~ "0", TRUE ~ E_06),  #num 
          E_07 = case_when(!(E_05 == "1") ~ "na", TRUE ~ E_07),
          E_08 = case_when(!(E_07 == "1") ~ "na", TRUE ~ E_08),
-         E_09 = case_when(!(E_08 == "1") ~ "na", TRUE ~ E_09),
-         E_11 = case_when(!(E_10 == "1") ~ "na", TRUE ~ E_11),
-         E_12 = case_when(!(E_10 == "1") ~ "na", TRUE ~ E_12))
+         E_09 = case_when(!(E_08 == "1") ~ "0", TRUE ~ E_09),  #num 
+         E_11 = case_when(!(E_10 == "1") ~ "0", TRUE ~ E_11),  #num 
+         E_12 = case_when(!(E_10 == "1") ~ "na", TRUE ~ E_12)) %>%
+  mutate(E_02 = as.integer(E_02),
+         E_06 = as.integer(E_06),
+         E_09 = as.integer(E_09),
+         E_11 = as.integer(E_11))
 
 colSums(is.na(C_e))
 
@@ -106,8 +138,9 @@ C_f <- C_f %>%
          F_02_CUAL = case_when(F_02 == "2" ~  "na", TRUE ~ F_02_CUAL),
          F_07 = case_when(!(F_06 == "1") ~ "na", TRUE ~ F_07),
          #para que la variable quede numérica se pone en vez de "na", no hay 0 en la variable original.
-         F_08 = case_when(!(F_07 == "1") ~ "0", TRUE ~ F_08),
-         F_09 = case_when(!(F_07 == "1") ~ "0", TRUE ~ F_09),
+         F_08 = case_when(!(F_07 == "1") ~ "0", TRUE ~ F_08), #num 
+         #Hay 0 en la variable original.
+         F_09 = case_when(!(F_07 == "1") ~ "na", TRUE ~ F_09), #num 
          F_10_A = case_when(!(F_07 == "1") ~ "na", TRUE ~ F_10_A),
          F_10_B = case_when(!(F_07 == "1") ~ "na", TRUE ~ F_10_B),
          F_10_C = case_when(!(F_07 == "1") ~ "na", TRUE ~ F_10_C),
@@ -130,8 +163,8 @@ C_f <- C_f %>%
          F_20_CUAL = case_when(!(F_20 == "1") ~  "na", TRUE ~ F_20_CUAL),
          F_21 = case_when(!(F_06 == "1") ~ "na", TRUE ~ F_21),
          F_21_CUAL = case_when(!(F_21 == "1") ~  "na", TRUE ~ F_21_CUAL)) %>%
-  mutate(F_08 = as.integer(F_08),
-         F_09 = as.integer(F_09))
+  mutate(F_04 = as.integer(F_04),
+         F_08 = as.integer(F_08))
   
 colSums(is.na(C_f))
 
@@ -233,7 +266,7 @@ C_h <- C_h %>%
          H_02_H = replace_na(H_02_H, "2"),
          H_02_I = replace_na(H_02_I, "2"),
          H_04 = case_when(!(H_03 == "1") ~ "na", TRUE ~ H_04),
-         H_05 = case_when(!(H_04 == "1") ~ "0", TRUE ~ H_05),
+         H_05 = case_when(!(H_04 == "1") ~ "0", TRUE ~ H_05), #num
          # Solo se marca cuando respondieron "1":si se pone "2" para no
          H_06_A = case_when(!(H_04 == "1") ~ "na", is.na(H_06_A) ~ "2", TRUE ~ H_06_A),
          H_06_B = case_when(!(H_04 == "1") ~ "na", is.na(H_06_B) ~ "2", TRUE ~ H_06_B),
@@ -274,7 +307,7 @@ C_i <- C_i %>%
          I_02_H = replace_na(I_02_H, "2"),
          I_02_I = replace_na(I_02_I, "2"),
          I_04 = case_when(!(I_03 == "1") ~ "na", TRUE ~ I_04),
-         I_05 = case_when(!(I_04 == "1") ~ "na", TRUE ~ I_05),
+         I_05 = case_when(!(I_04 == "1") ~ "0", TRUE ~ I_05), #num
          I_06_A = case_when(!(I_04 == "1") ~ "na", is.na(I_06_A) ~ "2", TRUE ~ I_06_A),
          I_06_B = case_when(!(I_04 == "1") ~ "na", is.na(I_06_B) ~ "2", TRUE ~ I_06_B),
          I_06_C = case_when(!(I_04 == "1") ~ "na", is.na(I_06_C) ~ "2", TRUE ~ I_06_C),
@@ -285,7 +318,6 @@ C_i <- C_i %>%
          I_07_D = case_when(!(I_07 == "1") ~ "na", is.na(I_07_D) ~ "2", TRUE ~ I_07_D),
          I_07_E = case_when(!(I_07 == "1") ~ "na", is.na(I_07_E) ~ "2", TRUE ~ I_07_E)) %>%
   mutate(I_05 = as.integer(I_05))
-  
   
 colSums(is.na(C_i))
 
@@ -357,12 +389,12 @@ C_k <- C_k %>%
          K_01_C = replace_na(K_01_C, "2"),
          K_01_D = replace_na(K_01_D, "2"),
          K_04 = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_04),
-         K_05 = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_05),
-         K_06 = case_when(!(K_05 == "1") ~ "na", TRUE ~ K_06),
-         K_07 = case_when(!(K_05 == "1") ~ "na", TRUE ~ K_07),
-         K_08 = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_08),
+         K_05 = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_05), 
+         K_06 = case_when(!(K_05 == "1") ~ "0", TRUE ~ K_06), #num
+         K_07 = case_when(!(K_05 == "1") ~ "0", TRUE ~ K_07), #num
+         K_08 = case_when(!(K_03 == "1") ~ "0", TRUE ~ K_08), #num
          K_09 = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_09),
-         K_09_VALOR = case_when(!(K_09 == "1") ~ "na", TRUE ~ K_09_VALOR),
+         K_09_VALOR = case_when(!(K_09 == "1") ~ "0", TRUE ~ K_09_VALOR), #num
          K_09_TEXTO = case_when(!(K_09 == "1") ~ "na", TRUE ~ K_09_TEXTO),
          K_10_A = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_10_A),
          K_10_B = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_10_B),
@@ -407,7 +439,11 @@ C_k <- C_k %>%
          K_12_L = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_12_L),
          K_12_M = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_12_M),
          K_12_N = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_12_N),
-         K_12_O = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_12_O))
+         K_12_O = case_when(!(K_03 == "1") ~ "na", TRUE ~ K_12_O)) %>%
+  mutate(K_06 = as.numeric(K_06),
+         K_07 = as.numeric(K_07),
+         K_08 = as.numeric(K_08),
+         K_09_VALOR = as.numeric(K_09_VALOR))
     
 colSums(is.na(C_k))
 
@@ -420,11 +456,11 @@ C_l <- C_l %>%
   mutate_all(as.character) %>%
   mutate(L_03 = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_03),
          L_04 = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_04),
-         L_05 = case_when(!(L_04 == "1") ~ "na", TRUE ~ L_05),
-         L_06 = case_when(!(L_04 == "1") ~ "na", TRUE ~ L_06),
-         L_07 = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_07),
+         L_05 = case_when(!(L_04 == "1") ~ "0", TRUE ~ L_05), #num
+         L_06 = case_when(!(L_04 == "1") ~ "0", TRUE ~ L_06), #num
+         L_07 = case_when(!(L_02 == "1") ~ "0", TRUE ~ L_07), #num
          L_08 = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_08),
-         L_08_VALOR = case_when(!(L_08 == "1") ~ "na", TRUE ~ L_08_VALOR),
+         L_08_VALOR = case_when(!(L_08 == "1") ~ "0", TRUE ~ L_08_VALOR), #num
          L_08_TEXTO = case_when(!(L_08 == "1") ~ "na", TRUE ~ L_08_TEXTO),
          L_08 = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_08),
          L_09_A = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_09_A),
@@ -464,7 +500,11 @@ C_l <- C_l %>%
          L_11_L = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_11_L),
          L_11_M = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_11_M),
          L_11_N = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_11_N),
-         L_11_O = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_11_O))
+         L_11_O = case_when(!(L_02 == "1") ~ "na", TRUE ~ L_11_O)) %>%
+  mutate(L_05 = as.integer(L_05),
+         L_06 = as.integer(L_06),
+         L_07 = as.integer(L_07),
+         L_08_VALOR = as.integer(L_08_VALOR))
 
 colSums(is.na(C_l))
 
@@ -477,11 +517,11 @@ C_m <- C_m %>%
   mutate_all(as.character) %>%
   mutate(M_03 = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_03),
          M_04 = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_04),
-         M_05 = case_when(!(M_04 == "1") ~ "na", TRUE ~ M_05),
-         M_06 = case_when(!(M_04 == "1") ~ "na", TRUE ~ M_06),
-         M_07 = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_07),
+         M_05 = case_when(!(M_04 == "1") ~ "0", TRUE ~ M_05), #num
+         M_06 = case_when(!(M_04 == "1") ~ "0", TRUE ~ M_06), #num
+         M_07 = case_when(!(M_02 == "1") ~ "0", TRUE ~ M_07), #num
          M_08 = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_08),
-         M_08_VALOR = case_when(!(M_08 == "1") ~ "na", TRUE ~ M_08_VALOR),
+         M_08_VALOR = case_when(!(M_08 == "1") ~ "0", TRUE ~ M_08_VALOR), #num
          M_08_TEXTO = case_when(!(M_08 == "1") ~ "na", TRUE ~ M_08_TEXTO),
          M_09_A = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_09_A),
          M_09_B = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_09_B),
@@ -515,7 +555,11 @@ C_m <- C_m %>%
          M_10_L = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_10_L),
          M_10_M = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_10_M),
          M_10_N = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_10_N),
-         M_10_O = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_10_O))
+         M_10_O = case_when(!(M_02 == "1") ~ "na", TRUE ~ M_10_O)) %>%
+  mutate(M_05 = as.integer(M_05),
+         M_06 = as.integer(M_06),
+         M_07 = as.integer(M_07),
+         M_08_VALOR = as.integer(M_08_VALOR))
 
 colSums(is.na(C_m))
 
@@ -528,16 +572,16 @@ C_n <- C_n %>%
   mutate_all(as.character) %>%
   mutate(N_03 = case_when(!(N_02 == "1") ~ "na", TRUE ~ N_03),
          N_04 = case_when(!(N_02 == "1") ~ "na", TRUE ~ N_04),
-         N_05 = case_when(!(N_04 == "1") ~ "na", TRUE ~ N_05),
+         N_05 = case_when(!(N_04 == "1") ~ "0", TRUE ~ N_05), #num
          N_06_A = case_when(!(N_04 == "1") ~ "na", TRUE ~ N_06_A),
          N_06_B = case_when(!(N_04 == "1") ~ "na", TRUE ~ N_06_B),
          N_06_C = case_when(!(N_04 == "1") ~ "na", TRUE ~ N_06_C),
          N_06_A = replace_na(N_06_A, "2"),
          N_06_B = replace_na(N_06_B, "2"),
          N_06_C = replace_na(N_06_C, "2"),
-         N_07 = case_when(!(N_06_A == "1") ~ "na", TRUE ~ N_07),
+         N_07 = case_when(!(N_06_A == "1") ~ "0", TRUE ~ N_07), #num
          N_08 = case_when(!(N_04 == "1") ~ "na", TRUE ~ N_08),
-         N_09 = case_when(!(N_02 == "1") ~ "na", TRUE ~ N_09),
+         N_09 = case_when(!(N_02 == "1") ~ "0", TRUE ~ N_09), #num
          N_09_TEXTO = case_when(!(N_02 == "1") ~ "na", TRUE ~ N_09_TEXTO),
          N_10_A = case_when(!(N_02 == "1") ~ "na", TRUE ~ N_10_A),
          N_10_B = case_when(!(N_02 == "1") ~ "na", TRUE ~ N_10_B),
@@ -556,7 +600,10 @@ C_n <- C_n %>%
          N_10_F = replace_na(N_10_F, "2"),
          N_10_G = replace_na(N_10_G, "2"),
          N_10_H = replace_na(N_10_H, "2"),
-         N_10_I = replace_na(N_10_I, "2"))
+         N_10_I = replace_na(N_10_I, "2")) %>%
+  mutate(N_05 = as.numeric(N_05),
+         N_07 = as.numeric(N_07),
+         N_09 = as.numeric(N_09))
 
 colSums(is.na(C_n))
 
@@ -578,11 +625,11 @@ C_o <- C_o %>%
          O_04_D = replace_na(O_04_D, "2"),
          O_04_FUMADA = case_when(!(O_04_A == "1") ~ "na", TRUE ~ O_04_FUMADA),
          O_05 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_05),
-         O_06 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_06),
-         O_07 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_07),
-         O_08 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_08),
+         O_06 = case_when(!(O_02 == "1") ~ "0", TRUE ~ O_06), #num
+         O_07 = case_when(!(O_02 == "1") ~ "0", TRUE ~ O_07), #num
+         O_08 = case_when(!(O_02 == "1") ~ "0", TRUE ~ O_08), #num
          O_09 = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_09),
-         O_09_VALOR = case_when(!(O_09 == "1") ~ "na", TRUE ~ O_09_VALOR),
+         O_09_VALOR = case_when(!(O_09 == "1") ~ "0", TRUE ~ O_09_VALOR), #num
          O_09_TEXTO = case_when(!(O_09 == "1") ~ "na", TRUE ~ O_09_TEXTO),
          O_10_A = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_A),
          O_10_B = case_when(!(O_02 == "1") ~ "na", TRUE ~ O_10_B),
@@ -601,7 +648,11 @@ C_o <- C_o %>%
          O_10_F = replace_na(O_10_F, "2"),
          O_10_G = replace_na(O_10_G, "2"),
          O_10_H = replace_na(O_10_H, "2"),
-         O_10_I = replace_na(O_10_I, "2"))
+         O_10_I = replace_na(O_10_I, "2")) %>%
+  mutate(O_06 = as.numeric(O_06),
+         O_07 = as.numeric(O_07),
+         O_08 = as.numeric(O_08),
+         O_09_VALOR = as.numeric(O_09_VALOR))
 
 colSums(is.na(C_o))
 
@@ -645,7 +696,6 @@ colSums(is.na(C_p3))
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 
-
 # CREACION DE DATA FRAMES ----
 
 ## ID sustancias ----
@@ -686,3 +736,4 @@ categorias_por_individuo_edit <- as.data.frame(cbind(DIRECTORIO =Tipo_consumo$DI
                                                 cantidad = str_count(categorias_por_individuo, ",")+1))
 
 categorias <- unique(categorias_por_individuo)
+

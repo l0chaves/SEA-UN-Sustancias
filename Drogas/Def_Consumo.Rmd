@@ -1,0 +1,76 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+```{r}
+library(dplyr)
+```
+
+# Sustancias Legales
+## E - tabaco
+
+### Consumo en el ultimo mes (numero de días)
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_e%>% filter(E_06 != 0)
+sum(nna$E_06 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(E_06 != "99")
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$E_06)
+hist(nna$E_06)
+quantile(nna$E_06, probs = 0.25)
+```
+Todo aquel que consuma mas de 8 días en el ultimo mes
+
+### Consumo en diarimente
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_e %>% filter(E_09 != "0")
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$E_09)
+hist(nna$E_09)
+quantile(nna$E_09, probs = 0.25)
+```
+Cualquier persona que consuma cigarrillo varias veces a la semana se debería considerar consumidor D_08 == "1" o  D_08 == "2"
+
+## F - tabaco
+### Consumo en el ultimo mes (numero de días)
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_f%>% filter(F_08 != 0)
+sum(nna$F_08 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(F_08 != "99")
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$F_08)
+hist(nna$F_08)
+quantile(nna$F_08, probs = 0.25)
+```
+
+Todo aquel que consuma mas de 1 días en el ultimo mes
+### Embriagado en el ultimo mes (numero de días)
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_f%>% filter(F_09 != "na")
+sum(nna$F_09 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(F_09 != "99") %>% mutate(F_09 = as.numeric(F_09))
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$F_09)
+hist(nna$F_09)
+quantile(nna$F_09, probs = 0.25)
+```
