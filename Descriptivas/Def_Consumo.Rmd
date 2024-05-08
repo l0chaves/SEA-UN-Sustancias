@@ -1,0 +1,220 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+```{r}
+library(dplyr)
+```
+
+# Sustancias Legales
+## E - tabaco
+
+###   el ultimo mes (días)
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_e%>% filter(E_06 != 0)
+sum(nna$E_06 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(E_06 != "99")
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$E_06)
+hist(nna$E_06)
+quantile(nna$E_06, probs = 0.25)
+```
+Todo aquel que consuma mas de 8 días en el ultimo mes
+
+###   diarimente
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_e %>% filter(E_09 != "0")
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$E_09)
+hist(nna$E_09)
+quantile(nna$E_09, probs = 0.25)
+```
+Cualquier persona que consuma cigarrillo varias veces a la semana se debería considerar consumidor D_08 == "1" o  D_08 == "2"
+
+## F - tabaco
+###   el ultimo mes (días)
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_f%>% filter(F_08 != 0)
+sum(nna$F_08 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(F_08 != "99")
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$F_08)
+hist(nna$F_08)
+quantile(nna$F_08, probs = 0.25)
+```
+
+
+Todo aquel que consuma mas de 1 días en el ultimo mes
+###  el ultimo mes (días) - Embriaguez
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_f%>% filter(F_09 != "na")
+sum(nna$F_09 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(F_09 != "99") %>% mutate(F_09 = as.numeric(F_09))
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$F_09)
+hist(nna$F_09)
+quantile(nna$F_09, probs = 0.25)
+```  
+
+###  el ultimo año - Embriaguez
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_f%>% filter(F_14 != "na")
+nrow(nna)
+```
+
+```{r}
+proportions <- as.data.frame(prop.table(table(nna$F_14))); proportions
+
+# Se mira el percentil 75% ya que el gráfico los pone al revés, iniciando por 5 (mas frecuentemente)
+ggplot(proportions, aes(x = 1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +  
+  labs(x = NULL, y = "Proportion") 
+quantile(as.integer(nna$F_14), 0.25)
+```
+Todos los que se hayan embriagado **al menos** de la "1": nunca ("2": al menos 1 vez al mes), se consideraría consumidor
+
+## H - tranquilizantes
+###  el ultimo mes (días)
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_h%>% filter(H_05 != 0)
+sum(nna$H_05 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(H_05 != "99")
+nrow(nna)
+```
+
+```{r}
+boxplot(nna$H_05)
+hist(nna$H_05)
+quantile(nna$H_05, probs = 0.25)
+```
+Se definiría consumidor a aquel que haya consumido medicamentos tranquilizantes mas de dos días en el ultimo mes.
+
+
+## I - estimulantes 
+###  el ultimo mes (días)
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_i%>% filter(I_05 != 0)
+sum(nna$I_05 == "99") # cuantas personas no contestaron
+nrow(nna)
+```
+```{r}
+boxplot(nna$I_05)
+hist(nna$I_05)
+quantile(nna$I_05, probs = 0.25)
+```
+Se definiría consumidor a aquel que haya consumido medicamentos estimulantes mas de 3 días en el ultimo mes.
+
+
+## J - inhalables
+###  el ultimo año - (1)inhalables
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_j_1%>% filter(J_03 != "na")
+nrow(nna)
+```
+
+```{r}
+proportions <- as.data.frame(prop.table(table(nna$J_03))); proportions
+
+# Se mira el percentil 75% ya que el gráfico los pone al revés, iniciando por 5 (mas frecuentemente)
+ggplot(proportions, aes(x = 1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +  
+  labs(x = NULL, y = "Proportion") 
+quantile(as.integer(nna$J_03), 0.25)
+```
+Todos los que hayan consumido pegantes/sacol, pinturas, thinner **al menos** de la "2": Algunas veces durante los últimos 12 meses, se consideraría consumidor
+
+###  el ultimo año - (2) DICK, Ladys o fragancia
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_j_2%>% filter(J_09 != "na")
+nrow(nna)
+```
+```{r}
+proportions <- as.data.frame(prop.table(table(nna$J_09))); proportions
+
+# Se mira el percentil 75% ya que el gráfico los pone al revés, iniciando por 5 (mas frecuentemente)
+ggplot(proportions, aes(x = 1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +  
+  labs(x = NULL, y = "Proportion") 
+quantile(as.integer(nna$J_09), 0.25)
+```
+Todos los que hayan consumido DICK, Ladys o fragancia **al menos** de la "1": Una sola vez, se consideraría consumidor
+
+### (3) Popper
+Para los que respondieron que habían consumido popper alguna vez en su vida solo se les pregunta si han consumido el ultimo año y si han consumido en los últimos 30 días, con posible respuestas: si, no y no contesta
+
+## K - marihuana
+###  el ultimo año 
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_k%>% filter(K_04 != "na")
+sum(nna$K_04 == "9") # cuantas personas no contestaron
+nna <- nna %>% filter(K_04 != "9")
+nrow(nna)
+```
+```{r}
+proportions <- as.data.frame(prop.table(table(nna$K_04))); proportions
+
+# Se mira el percentil 75% ya que el gráfico los pone al revés, iniciando por 5 (mas frecuentemente)
+ggplot(proportions, aes(x = 1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +  
+  labs(x = NULL, y = "Proportion") 
+quantile(as.integer(nna$K_04), 0.25)
+```
+Todos los que hayan consumido **al menos** de la "2": Algunas veces durante los últimos 12 meses, se consideraría consumidor
+
+###   el ultimo mes (días)
+
+```{r}
+# Se borran los registros de "no aplica"
+nna <- C_k%>% filter(K_06 != 0)
+sum(nna$K_06 == "99") # cuantas personas no contestaron
+nna <- nna %>% filter(K_06 != "99")
+nrow(nna)
+```
+```{r}
+boxplot(nna$K_06)
+hist(nna$K_06)
+quantile(nna$K_06, probs = 0.25)
+```
+## L - cocaína
+
+
+## M - basuco
+
+
+## N - extasis
+
+
+## O - heroína
+
+
+## P - otras
