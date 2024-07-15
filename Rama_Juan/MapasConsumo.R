@@ -1,0 +1,82 @@
+##MAPAS
+library(dplyr)
+library(sqldf)
+setwd("C:/Users/jufem/OneDrive/Documentos/Semillero SEA/Rama_Juan")
+respuestas_por_muni <- readRDS("respuestas_por_muni.rds")
+row.names(respuestas_por_muni)<-respuestas_por_muni$Depmuni
+respuestas_por_muni[is.na(respuestas_por_muni)] <- 0
+
+Municipios <- readRDS("C:/Users/jufem/Downloads/Municipios (1).rds")
+tabla_total2<-respuestas_por_muni%>%inner_join(Municipios,by=c("Depmuni"="Depmun"))%>%select(everything(respuestas_por_muni),Departamento, Dep, Municipio,Poblacion)
+tabla_total3<-tabla_total2%>%group_by(Departamento,Dep) %>% summarise(across(where(is.numeric), sum, na.rm = TRUE))
+library(sf)
+library(ggplot2)
+
+#MGN de colombia x departamento
+mgnxdeptos <- st_read("Mapa/MGN_DPTO_POLITICO.shp",quiet=TRUE)
+#Uniendo la TABLA_OTAL
+mapaxdeptos <- mgnxdeptos %>% left_join(tabla_total3,by=c("DPTO_CCDGO"="Dep"))
+#Mapas paises fronterizos con colombia
+poligcol <- st_read("Mapa/admin00.shp",quiet=TRUE)
+paises<-c("Venezuela","Ecuador","Panama","Peru","Brazil")
+mapacolombia <- poligcol %>% filter(CNTRY_NAME %in% paises) ;box <- st_bbox(mapaxdeptos)
+  #library(readr)
+  #write_rds(mapaxdeptos,"mapaxdeptos.rds")
+
+
+##########Lo que hay que cargar
+
+#mapacolombia<-read_rds("mapacolombia.rds")
+
+############### Graficando los mapas
+######################E_05 tabaco
+ggplot() + geom_sf(data=mapacolombia) +
+  geom_sf(data=mapaxdeptos,aes(fill=round(10^5*E_05/Poblacion,3)),col="darkgray",linetype="solid") +
+  coord_sf(xlim=c(box$xmin,box$xmax),ylim=c(box$ymin,box$ymax),expand=FALSE) +
+  geom_sf_text(data=mapaxdeptos,aes(label=ifelse(E_05 >= 0,Departamento,"")),col="black",
+               fontface="bold",size=4,fun.geometry=function(x) sf::st_centroid(x)) +
+  labs(x="Longitud",y="Latitud",title="Consumption rate of cigarettes in the last 30 days per ",
+       fill="Count per \n 10^5") +
+  scale_fill_gradient(low="white",high="red",n.breaks=5) +
+  annotate("text", x=c(-74.5,-68,-78,-69,-78.5), y=c(-2.5,0,-1,9,9), colour="blue",
+           label=c("Perú","Brasil","Ecuador","Venezuela","Panamá")) +
+  theme(panel.background=element_rect(fill="lightblue"))
+
+######################F_07 alcohol
+ggplot() + geom_sf(data=mapacolombia) +
+  geom_sf(data=mapaxdeptos,aes(fill=round(10^5*F_07/Poblacion,3)),col="darkgray",linetype="solid") +
+  coord_sf(xlim=c(box$xmin,box$xmax),ylim=c(box$ymin,box$ymax),expand=FALSE) +
+  geom_sf_text(data=mapaxdeptos,aes(label=ifelse(F_07 >40,Departamento,"")),col="black",
+               fontface="bold",size=4,fun.geometry=function(x) sf::st_centroid(x)) +
+  labs(x="Longitud",y="Latitud",title="Consumption of Alcohol in the last 30 days",
+       fill="Count per \n 10^5") +
+  scale_fill_gradient(low="white",high="red",n.breaks= 16) +
+  annotate("text", x=c(-74.5,-68,-78,-69,-78.5), y=c(-2.5,0,-1,9,9), colour="blue",
+           label=c("Perú","Brasil","Ecuador","Venezuela","Panamá")) +
+  theme(panel.background=element_rect(fill="lightblue"))
+
+######################marihuana
+ggplot() + geom_sf(data=mapacolombia) +
+  geom_sf(data=mapaxdeptos,aes(fill=round(10^5*K_05/Poblacion,3)),col="darkgray",linetype="solid") +
+  coord_sf(xlim=c(box$xmin,box$xmax),ylim=c(box$ymin,box$ymax),expand=FALSE) +
+  geom_sf_text(data=mapaxdeptos,aes(label=ifelse(K_05 >0,Departamento,"")),col="black",
+               fontface="bold",size=4,fun.geometry=function(x) sf::st_centroid(x)) +
+  labs(x="Longitud",y="Latitud",title="Consumption of Marihuana in the last 30 days",
+       fill="Count per \n 10^5") +
+  scale_fill_gradient(low="white",high="red",n.breaks= 16) +
+  annotate("text", x=c(-74.5,-68,-78,-69,-78.5), y=c(-2.5,0,-1,9,9), colour="blue",
+           label=c("Perú","Brasil","Ecuador","Venezuela","Panamá")) +
+  theme(panel.background=element_rect(fill="lightblue"))
+
+######################cocaina
+ggplot() + geom_sf(data=mapacolombia) +
+  geom_sf(data=mapaxdeptos,aes(fill=round(10^5*L_04/Poblacion,3)),col="darkgray",linetype="solid") +
+  coord_sf(xlim=c(box$xmin,box$xmax),ylim=c(box$ymin,box$ymax),expand=FALSE) +
+  geom_sf_text(data=mapaxdeptos,aes(label=ifelse(L_04 >0,Departamento,"")),col="black",
+               fontface="bold",size=4,fun.geometry=function(x) sf::st_centroid(x)) +
+  labs(x="Longitud",y="Latitud",title="Consumption of Cocaine in the last 30 days",
+       fill="Count per \n 10^5") +
+  scale_fill_gradient(low="white",high="red",n.breaks= 16) +
+  annotate("text", x=c(-74.5,-68,-78,-69,-78.5), y=c(-2.5,0,-1,9,9), colour="blue",
+           label=c("Perú","Brasil","Ecuador","Venezuela","Panamá")) +
+  theme(panel.background=element_rect(fill="lightblue"))
