@@ -1,8 +1,9 @@
-load("C:/Users/luluf/OneDrive - Universidad Nacional de Colombia/Semillero/Limpieza_tablas/tablas.RData")
+load("Limpieza_tablas/tablas.RData")
 rm(list = setdiff(ls(), c("C_j_1", "C_j_2", "control", "d", "d2", "encuestas")))
 
 library("MASS")
 library("dplyr")
+library("ordinal")
 library("DescTools")
 # ---------------------------------------------------------------------------- #
 # Para las drogas que apliquen se utiliza como variable respuesta (Y) la 
@@ -13,9 +14,9 @@ X <- d %>%
   left_join(d2,by=c("DIRECTORIO"="DIRECTORIO")) %>%
   left_join(encuestas,by=c("DIRECTORIO"="DIRECTORIO")) %>%
   dplyr::select(`DIRECTORIO`, `D_01`, `D_02`, `D_07`, `D_08`, `D_10`,
-                `D2_01`, `D2_03`, `D2_05`, TOTAL_PERSONAS, `D_05`) %>%
-  mutate_at(vars(2:9), as.factor) %>%
-  mutate_at(vars(10, 11), as.numeric)
+                `D2_01`, `D2_03`, `D2_05`, SEXO, EDAD, TOTAL_PERSONAS, `D_05`) %>%
+  mutate_at(vars(2,10), as.factor) %>%
+  mutate_at(vars(11, 13), as.numeric)
 
 summary(X)
 
@@ -40,17 +41,24 @@ summary(fitCJ) #AIC: 86.68526
 ### 1 AIC: 83.90639----
 #var relacionadas
 scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
-              upper=~J_05_A+J_05_B+J_05_C+J_05_D+J_05_E+J_05_F+J_06_A+J_06_B+J_06_C+J_06_D+J_06_E+J_06_F+J_06_G+J_06_H+J_06_I+FG_01+G_02+D_11+G_11+D_09)
+              upper=~J_05_A+J_05_B+J_05_C+J_05_D+J_05_E+J_05_F+J_06_A+J_06_B+J_06_C+J_06_D+J_06_E+J_06_F+J_06_G+J_06_H+J_06_I+
+                FG_01+G_02+D_11+G_11+D_09)
 stepAIC(fitCJ, scope=scope, direction = "forward")
 
-fit1J <- polr(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+fit1J_mass <- polr(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
                 J_05_B + J_06_C, data = MD_J, Hess = TRUE, method = "probit")
-summary(fit1J) # AIC: 83.90639 
+summary(fit1J_mass) 
+
+
+fit1J_ord <- clm(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                     J_05_B + J_06_C, data = MD_J, link = "probit")
+summary(fit1J_ord)
 
 ### 2 (!!)AIC: 83.69355 ----
 # var sociodemograficas
 scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
-              upper=~D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+FG_01+G_02+D_11+G_11+D_09)
+              upper=~D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+EDAD+SEXO+
+                FG_01+G_02+D_11+G_11+D_09)
 stepAIC(fitCJ, scope=scope, direction = "forward")
 
 fit2J <- polr(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
@@ -60,7 +68,7 @@ summary(fit2J)# AIC: 83.69355
 ### 3 (!!)AIC: 79.78903 ----
 scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
               upper=~J_05_A+J_05_B+J_05_C+J_05_D+J_05_E+J_05_F+J_06_A+J_06_B+J_06_C+J_06_D+J_06_E+J_06_F+J_06_G+J_06_H+J_06_I+
-                    D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+
+                    D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+EDAD+SEXO+
                     FG_01+G_02+D_11+G_11+D_09)
 stepAIC(fitCJ, scope=scope, direction = "forward")
 
@@ -70,14 +78,18 @@ fit3J <- polr(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
 summary(fit3J) #AIC: 79.78903 
 
 ### 4 (!)AIC: 75.59737  ----
-fit4J <- polr(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                D_10 + TOTAL_PERSONAS + J_05_F + J_06_D + J_06_B + J_06_G, 
+fit4J_mass <- polr(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+              TOTAL_PERSONAS + J_05_F + J_06_D + J_06_B + J_06_G, 
               data = MD_J, Hess = TRUE, method = "probit")
-summary(fit4J) # AIC: 75.59737 
+summary(fit4J_mass) # AIC: 75.59737 
 
-#Hessiana no singular?
-PseudoR2(fit4J)
+fit4J_ord <- clm(formula = factor(J_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
+                  TOTAL_PERSONAS + J_05_F + J_06_D + J_06_B + J_06_G, 
+                   data = MD_J, link = "probit")
+summary(fit4J_ord)
 
+#### pruebas ----
+vif(fit4J_mass)
 
 # ---------------------------------------------------------------------------- #
 # J - Inhalables(2) ----
@@ -99,12 +111,18 @@ summary(fitCJ2) #AIC: 47.4908
 ## selección ----
 ### 1 (!!) AIC: 22.05236 ----
 scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
-              upper=~D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+FG_01+G_02+D_11+G_11+D_09)
+              upper=~D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+EDAD+SEXO+FG_01+G_02+D_11+G_11+D_09)
 stepAIC(fitCJ2, scope=scope, direction = "forward")
 
-fit1J2 <- polr(formula = factor(J_09) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                 D_07 + D2_01, data = MD_J2, Hess = TRUE, method = "probit")
-summary(fit1J2) # AIC: 22.05236 
+fit1J2_mass <- polr(formula = factor(J_09) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                 D_07 + SEXO, data = MD_J2, Hess = TRUE, method = "probit")
+summary(fit1J2_mass) 
 
+fit1J2_ord <- clm(formula = factor(J_09) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                     D_07 + SEXO, data = MD_J2, link = "probit")
+summary(fit1J2_ord)
+
+#### pruebas ----
+VIF(fit1J2_mass)
 PseudoR2(fit1J2)
          
