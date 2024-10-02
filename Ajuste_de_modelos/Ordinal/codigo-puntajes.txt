@@ -1,0 +1,78 @@
+
+set.seed(4)
+
+M <- matrix(c(rpois(25,1)), ncol = 5)
+M
+
+puntaje <- function(mc){
+  
+  v  <- c(mc[1,2], mc[2,3], mc[3,4], mc[4,5], 
+          mc[2,1], mc[3,2], mc[4,3], mc[5,4])
+  a  <- c(mc[1,3], mc[2,4], mc[3,5], 
+          mc[3,1], mc[4,2], mc[5,3])
+  m  <- c(mc[1,4], mc[2,5], 
+          mc[4,1], mc[5,2])
+  r  <- c(mc[5,1], mc[1,5])
+  
+  #Pesos
+  pv <- 0.05
+  pa <- 0.1
+  pm <- 0.15
+  pr <- 0.2
+  
+  puntaje <- sum(c(pv*v, pa*a, pm*m, pr*r))
+  
+  return(puntaje)
+}
+
+# M: matriz de confusion
+puntaje(M)
+
+
+# Modelo efectos aleatorios ---------------------------------------------------
+library(ordinal)
+
+# Usaremos un conjunto de datos ficticio. Puedes usar tu propio dataset.
+# Por ejemplo, vamos a usar el dataset wine del paquete ordinal.
+data(wine)
+
+# Ajustar el modelo clmm con efecto aleatorio
+library(ordinal)
+data(wine)
+
+# Modelo ordinal con efectos aleatorios
+fm1 <- clmm(rating ~ temp + contact + (1 | judge), data = wine, link = "probit")
+
+summary(fm1)
+fitted(fm1)
+summary(fitted(fm1))
+hist(fitted(fm1))
+
+# Ver los valores ajustados
+valores_ajustados <- qnorm(fitted(fm1))
+summary(valores_ajustados)
+
+# Imprimir los valores ajustados para ver qué obtenemos
+print(valores_ajustados)
+
+# Extraer los puntos de corte (thresholds) del modelo
+cortes <- fm1$Theta
+cortes <- c(-Inf, cortes, Inf)  # Agregar -Inf y Inf para comparar adecuadamente
+
+# Función para asignar categoría basada en los puntos de corte
+asignar_categoria <- function(valor_ajustado, cortes) {
+  # Buscar el intervalo en el que cae el valor ajustado
+  categoria <- findInterval(valor_ajustado, cortes)
+  return(categoria)
+}
+
+# Aplicar la función a cada valor ajustado
+categorias_predichas <- sapply(valores_ajustados, asignar_categoria, cortes = cortes)
+
+# Mostrar las categorías predichas
+print(categorias_predichas)
+
+#Efectos fijos ----------------------------------------------------------------
+
+# Para cada observación, obtener la categoría con mayor probabilidad
+categorias_predichas <- apply(probabilidades_ajustadas, 1, which.max)
