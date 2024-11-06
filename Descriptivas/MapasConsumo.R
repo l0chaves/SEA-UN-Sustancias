@@ -2,6 +2,10 @@
 library(dplyr)
 library(readr)
 #library(sqldf)
+
+# El archivo respuestas_po_mini.rds necesario para esta tabla se encuentra en la carpeta de modelos por municipip
+
+
 setwd("C:/Users/jufem/OneDrive/Documentos/Semillero SEA/Rama_Juan")
 respuestas_por_muni <- readRDS("respuestas_por_muni.rds")
 row.names(respuestas_por_muni)<-respuestas_por_muni$Depmuni
