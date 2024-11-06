@@ -1,4 +1,5 @@
 load("Limpieza_tablas/tablas.RData")
+source('Ajuste_de_modelos/variables de control.R')
 rm(list = setdiff(ls(), c("C_k", "control", "d", "d2", "encuestas")))
 
 library("MASS")
@@ -39,6 +40,8 @@ summary(MD_K) #Los que contestaron 9 en la pregunta original quedan como NA's
 MD_K <- MD_K[complete.cases(MD_K),]
 
 # ---------------------------------------------------------------------------- #
+# Ajuste de modelos ----
+# ---------------------------------------------------------------------------- #
 
 fit0K <- polr(factor(K_04) ~ 1, data = MD_K, Hess = TRUE, method = "probit")
 summary(fit0K) #AIC: 3800.169
@@ -75,9 +78,11 @@ fit3K_mass <- polr(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
                 K_12_O + K_10_C + K_12_I + SEXO + D_02 + K_10_D + K_12_H + 
                 K_11 + K_10_E + TOTAL_PERSONAS + K_12_C + EDAD + 
                 K_10_I + D_01, data = MD_K, Hess = TRUE, method = "probit")
+
 fit3K_ord <- clm(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-              + SEXO + EDAD +  TOTAL_PERSONAS + D_01 + D_02 + K_10_C + K_10_D +  K_10_E  + K_10_I 
-              + K_11  + K_12_C + K_12_H + K_12_I + K_12_O , data = MD_K, link = "probit")
+                  K_12_O + K_10_C + K_12_I + SEXO + D_02 + K_10_D + K_12_H + 
+                  K_11 + K_10_E + TOTAL_PERSONAS + K_12_C + EDAD + 
+                  K_10_I + D_01, data = MD_K, link = "probit")
 summary(fit3K_mass)
 summary(fit3K_ord)
 
