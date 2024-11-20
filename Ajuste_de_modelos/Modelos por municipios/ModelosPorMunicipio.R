@@ -4,6 +4,12 @@ tabla_total[is.na(tabla_total)] <- 0
 row.names(tabla_total)<-tabla_total$Depmuni
 respuestas_por_muni <- readRDS("respuestas_por_muni.rds")
 row.names(respuestas_por_muni)<-respuestas_por_muni$Depmuni
+View(tabla_total)
+
+
+
+
+
 ############################Modelos univariados
 library(glmtoolbox)
 ###############Tobacco
