@@ -1,7 +1,8 @@
-tabla_total <- readRDS("~/Semillero SEA/Rama_Juan/tabla_total.rds") 
+setwd('C:/Users/Embag/OneDrive/Documents/GitHub/SEMILLERO-SEA-UN/Ajuste_de_modelos/Modelos por municipios')
+tabla_total <- readRDS("tabla_total.rds") 
 tabla_total[is.na(tabla_total)] <- 0
 row.names(tabla_total)<-tabla_total$Depmuni
-respuestas_por_muni <- readRDS("~/Semillero SEA/Rama_Juan/respuestas_por_muni.rds")
+respuestas_por_muni <- readRDS("respuestas_por_muni.rds")
 row.names(respuestas_por_muni)<-respuestas_por_muni$Depmuni
 ############################Modelos univariados
 library(glmtoolbox)
