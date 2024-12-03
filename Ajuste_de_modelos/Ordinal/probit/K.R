@@ -10,10 +10,16 @@ library("car")
 library("PResiduals")
 library("ggplot2")
 library("sure")
+<<<<<<< Updated upstream
+=======
+library("sqldf")
+
+>>>>>>> Stashed changes
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 
 # Co-variables ----
+#Se tienen en cuenta variables socio-demográficas para usar como covariables
 X <- d %>%
   left_join(d2,by=c("DIRECTORIO"="DIRECTORIO")) %>%
   left_join(encuestas,by=c("DIRECTORIO"="DIRECTORIO")) %>%
@@ -26,6 +32,7 @@ summary(X)
 
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
+#Se añaden las variables relacionas con el consumo de marihuana
 
 MD_K <- C_k %>% 
   filter(K_04 != "na") %>% #Y. borrando los registros de na
@@ -86,9 +93,80 @@ fit3K_ord <- clm(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
 summary(fit3K_mass)
 summary(fit3K_ord)
 
+<<<<<<< Updated upstream
 #### pruebas ----
-vif(fit3K_mass)
+=======
+# ---------------------------------------------------------------------------- #
+## Categorizando Edad ----
+# ---------------------------------------------------------------------------- #
 
+#se categoriza la variable edad
+MD_Kc<- sqldf("select *,
+             case when EDAD <= 17 then 'Teenagers'
+                  when EDAD <= 24 then 'Young'
+                  when EDAD <= 34 then 'Young Adult'
+                  when EDAD <= 44 then 'Adult'
+                  when EDAD <= 63 then 'Elderly'
+                  else 'Third Age'
+             end as CEDAD
+             from MD_K")
+
+#Se hace selección automática cambiando edad por su versión categórica
+fitCKc <- polr(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09, data = MD_Kc, Hess = TRUE, method = "probit")
+scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09, 
+              upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
+                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
+                FG_01+G_02+D_11+G_11+D_09)
+stepAIC(fitCKc, scope=scope, direction = "forward")
+
+
+### 4 AIC: 3297.959 ----
+#!!! Multicolinealidad, no converge
+fit4K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                    K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + K_10_D + SEXO + 
+                    K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
+                    D_01 + K_12_K, data = MD_Kc, Hess = TRUE, method = "probit")
+
+fit4K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                    K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + K_10_D + SEXO + 
+                    K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
+                    D_01 + K_12_K, data = MD_Kc, link = "probit")
+summary(fit4K_mass)
+summary(fit4K_ord)
+
+### 5 AIC: 3333.79  ----
+fit5K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                     K_12_O + K_10_C + CEDAD + K_12_I + K_10_D + SEXO + 
+                     K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
+                     D_01 + K_12_K, data = MD_Kc, Hess = TRUE, method = "probit")
+
+fit5K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                   K_12_O + K_10_C + CEDAD + K_12_I + K_10_D + SEXO + 
+                   K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
+                   D_01 + K_12_K, data = MD_Kc, link = "probit")
+summary(fit5K_mass)
+summary(fit5K_ord)
+
+# ---------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
+# Validación ----
+
+# ---------------------------------------------------------------------------- #
+
+## Multicolinealidad ----
+>>>>>>> Stashed changes
+vif(fit3K_mass)
+vif(fit4K_mass)
+vif(fit5K_mass)
+
+
+# ---------------------------------------------------------------------------- #
+
+<<<<<<< Updated upstream
+=======
+## residuales ----
+### fit3 ----
+>>>>>>> Stashed changes
 # Obtain the SBS/probability-scale residuals
 pres <- presid(fit3K_mass)
 
@@ -109,3 +187,105 @@ p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
 
 grid.arrange(p1, p2, ncol = 2)
 
+<<<<<<< Updated upstream
+=======
+### fit5 ----
+# Obtain the SBS/probability-scale residuals
+pres_f5 <- presid(fit5K_mass)
+
+p1 <- ggplot(data.frame(y = pres_f5), aes(sample = y)) +
+  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "#6B8E23", linewidth = 1, linetype= "dashed") +
+  xlab("Sample quantile") +
+  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)");p1
+
+set.seed(101) # for reproducibility
+sres_f5 <- resids(fit5K_mass)
+
+p2 <- ggplot(data.frame(y = sres_f5), aes(sample = y)) +
+  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "#6B8E23", linewidth = 1, linetype= "dashed") +
+  xlab("Sample quantile") +
+  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); p2
+
+grid.arrange(p1, p2, ncol = 2)
+
+
+# ---------------------------------------------------------------------------- #
+
+## matriz de confusión ----
+# Función para categorizar
+categorizar <- function(x, Qp) {
+  if (x < Qp[1]) {
+    return("1")
+  } else if (x >=  Qp[1] && x <  Qp[2]) {
+    return("2")
+  } else if (x >=  Qp[2] && x <  Qp[3]) {
+    return("3")
+  } else if (x >=  Qp[3] && x <  Qp[4]) {
+    return("4")
+  } else {
+    return("5")
+  }
+}
+
+### fit3 ----
+#creo la matriz diseño con solo las variables seleccionadas en el modelo
+hat_X <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
+                         K_12_O, K_10_C, K_12_I, SEXO, D_02, K_10_D, K_12_H, 
+                         K_11, K_10_E, TOTAL_PERSONAS, K_12_C, EDAD, 
+                         K_10_I, D_01)
+hat_X <- model.matrix(K_04 ~ ., hat_X)
+hat_X <- hat_X[,2:28] # - el intercepto
+
+beta <- fit3K_ord$beta
+
+hat_y_f3 <- hat_X %*% beta
+Qp <- fit3K_ord$alpha #los puntos de corte interceptos estimados
+
+categorias_f3 <- sapply(hat_y_f3, categorizar, Qp)
+pred_f3 <- as.data.frame(cbind(MD_K$K_04, categorias_f3, hat_y_f3))
+
+#matriz de confusión con los valores reales en las filas, predichos columnas
+CM_fit3 <- table(pred_f3$V1, pred_f3$categorias_f3)
+
+
+### fit5 ----
+#creo la matriz diseño con solo las variables seleccionadas en el modelo
+hat_X <- MD_Kc %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
+                                   K_12_O, K_10_C, CEDAD, K_12_I, K_10_D, SEXO, 
+                                   K_11, K_12_H, K_10_E, K_12_C, TOTAL_PERSONAS, K_10_I, 
+                                   D_01, K_12_K,)
+hat_X <- model.matrix(K_04 ~ ., hat_X)
+hat_X <- hat_X[,-1] # - el intercepto
+
+beta <- fit5K_ord$beta
+
+hat_y_f5 <- hat_X %*% beta
+Qp <- fit5K_ord$alpha #los puntos de corte interceptos estimados
+
+categorias_f5 <- sapply(hat_y_f5, categorizar, Qp)
+pred_f5 <- as.data.frame(cbind(MD_Kc$K_04, categorias_f5, hat_y_f5))
+
+#matriz de confusión con los valores reales en las filas, predichos columnas
+CM_fit5 <- table(pred_f5$V1, pred_f5$categorias_f5)
+
+### fitC ----
+fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
+             data = MD_K, link = "probit")
+
+hat_Xc <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09)
+hat_Xc <- model.matrix(K_04 ~ ., hat_Xc)
+hat_Xc <- hat_Xc[,-1] # - el intercepto
+
+beta_c <- fitCK$beta
+hat_yc <- hat_Xc %*% beta_c
+Qp_c <- fitCK$alpha #los puntos de corte intercepto estimados
+
+categorias_c <- sapply(hat_yc, categorizar, Qp_c)
+pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
+
+#matriz de confusión con los valores reales en las filas, predichos columnas
+CM_control <- table(pred_control$V1, pred_control$categorias)
+
+>>>>>>> Stashed changes
