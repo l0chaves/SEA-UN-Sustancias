@@ -1,10 +1,10 @@
 load("Limpieza_tablas/tablas.RData")
+source("Ajuste_de_modelos/variables de control.R")
 rm(list = setdiff(ls(), c("C_l", "control", "d", "d2", "encuestas")))
 
 library("MASS")
 library("dplyr")
 library("DescTools")
-library("ordinal")
 library("ordinal")
 library("car")
 library("PResiduals")
@@ -55,7 +55,7 @@ scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
 stepAIC(fitCL, scope=scope, direction = "forward")
 
 
-### 1 AIC: 738.6616 ----
+### 2 AIC: 738.6616 ----
 fit2L_mass <- polr(formula = factor(L_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
        L_09_C + EDAD + D_07 + D_02, data = MD_L, Hess = TRUE, method = "probit")
 summary(fit2L_mass)  
@@ -76,9 +76,10 @@ fit3L_ord <- clm(formula = factor(L_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
                    data = MD_L, link = "probit")
 summary(fit3L_ord)
 
-#### pruebas ----
+#  Validación ----
 vif(fit3L_mass)
 
+## residuales ----
 pres <- presid(fit3L_mass)
 
 p1 <- ggplot(data.frame(y = pres), aes(sample = y)) +
@@ -97,3 +98,57 @@ p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
   ylab("Theoretical quantile") + ggtitle("QQ-plot - Cocaine (Surrogate)"); p2
 
 grid.arrange(p1, p2, ncol = 2)
+
+## matriz de confusión ----
+# Copiado del modelo de efectos mixtos
+# Función para categorizar
+categorizar <- function(x, Qp) {
+  if (x < Qp[1]) {
+    return("1")
+  } else if (x >=  Qp[1] && x <  Qp[2]) {
+    return("2")
+  } else if (x >=  Qp[2] && x <  Qp[3]) {
+    return("3")
+  } else if (x >=  Qp[3] && x <  Qp[4]) {
+    return("4")
+  } else {
+    return("5")
+  }
+}
+
+### fit3 ----
+#creo la matriz diseño con solo las variables seleccionadas en el modelo
+hat_X <- MD_L %>% dplyr::select(L_03, FG_01 ,G_02 ,D_11 ,G_11 ,D_09 ,
+                                EDAD ,L_09_C ,L_11_A ,L_11_O ,L_11_H ,L_11_I)
+hat_X <- model.matrix(L_03 ~ ., hat_X)
+hat_X <- hat_X[,-1] # - el intercepto
+
+beta <- fit3L_ord$beta
+
+hat_y <- hat_X %*% beta
+Qp <- fit3L_ord$alpha #los puntos de corte interceptos estimados
+
+categorias <- sapply(hat_y, categorizar, Qp)
+pred <- as.data.frame(cbind(MD_L$L_03, categorias, hat_y))
+
+#matriz de confusión con los valores reales en las filas, predichos columnas
+CM_fit3 <- table(pred$V1, pred$categorias)
+
+### fitC ----
+fitCL <- clm(factor(L_03) ~ FG_01+G_02+D_11+G_11+D_09,
+             data = MD_L, link = "probit")
+
+hat_Xc <- MD_L %>% dplyr::select(L_03, FG_01, G_02, D_11, G_11, D_09)
+hat_Xc <- model.matrix(L_03 ~ ., hat_Xc)
+hat_Xc <- hat_Xc[,-1] # - el intercepto
+
+beta_c <- fitCL$beta
+hat_yc <- hat_Xc %*% beta_c
+Qp_c <- fitCL$alpha #los puntos de corte intercepto estimados
+
+categorias_c <- sapply(hat_yc, categorizar, Qp_c)
+pred_control <- as.data.frame(cbind(MD_L$L_03, categorias_c, hat_yc))
+
+#matriz de confusión con los valores reales en las filas, predichos columnas
+CM_control <- table(pred_control$V1, pred_control$categorias)
+
