@@ -1,4 +1,11 @@
-################################# Carga de base de datos tabla_total ----
+# Librerias ---------------------------------------------------------------
+
+library(readxl)
+library(dplyr)
+library(glmtoolbox)
+
+
+# Carga de datos\ ---------------------------------------------------------
 setwd('C:/Users/jufem/OneDrive/Documentos/GitHub/SEMILLERO-SEA-UN/Ajuste_de_modelos/Modelos por municipios')
 tabla_total <- readRDS("tabla_total.rds") 
 tabla_total[is.na(tabla_total)] <- 0
@@ -6,39 +13,55 @@ row.names(tabla_total)<-tabla_total$Depmuni
 respuestas_por_muni <- readRDS("respuestas_por_muni.rds")
 row.names(respuestas_por_muni)<-respuestas_por_muni$Depmuni
 View(tabla_total)
-################################## Modelos por municipio usando variable de 12 meses.
 
-library(dplyr)
-#Creando tabal_total2 con regresores:
+
+## Creando tabla_total2 ----------------------------------------------------
+
+
 tabla_total2 <- tabla_total %>%
   select(-which(colnames(tabla_total) %in% colnames(respuestas_por_muni) & colnames(tabla_total) != "Depmuni"))%>%
   select(-c(4:22))
 tabla_total2<-within(tabla_total2, Depmuni<-as.numeric(Depmuni)) 
-########################################################################
 
-#codigo de municipios:
-setwd("C:/Users/jufem/OneDrive/Documentos/GitHub/SEMILLERO-SEA-UN/Datos_originales")
-encuestas<-read.csv("encuestas.csv")%>%select('Depmuni','DIRECTORIO')
+## cargando capitulos de la encuesta ---------------------------------------
 #e,f,k,l
-#tabaco
+
+setwd("C:/Users/jufem/OneDrive/Documentos/GitHub/SEMILLERO-SEA-UN/Datos_originales")
+
+###encuestas
+encuestas<-read.csv("encuestas.csv")%>%select('Depmuni','DIRECTORIO')
+###tabaco
 ecapitulos<-read.csv("e_capitulos.csv")%>%select('E_04','DIRECTORIO')%>%filter(E_04==1)%>%
   inner_join(encuestas, by = "DIRECTORIO")%>%group_by(Depmuni)%>%summarise(E_04=sum(E_04))
+
 summary(ecapitulos)
-#alcohol
+
+###alcohol
 fcapitulos<-read.csv("f_capitulos.csv")%>%select('F_06','DIRECTORIO')%>%filter(F_06==1)%>%
   inner_join(encuestas, by = "DIRECTORIO")%>%group_by(Depmuni)%>%summarise(F_06=sum(F_06))
+
 summary(fcapitulos)
-#marihuana
+
+###marihuana
 kcapitulos<-read.csv("k_capitulos.csv")%>%select('K_03','DIRECTORIO')%>%filter(K_03==1)%>%
   inner_join(encuestas, by = "DIRECTORIO")%>%group_by(Depmuni)%>%summarise(K_03=sum(K_03))
+
 summary(kcapitulos)
-#cocaina
+
+###cocaina
 lcapitulos<-read.csv("l_capitulos.csv")%>%select('L_02','DIRECTORIO')%>%filter(L_02==1)%>%
   inner_join(encuestas, by = "DIRECTORIO")%>%group_by(Depmuni)%>%summarise(L_02=sum(L_02))
+
 summary(lcapitulos)
+
 #No hay ceros por municipio, es decir hay al menos un consumidor de droga en cada municipio.
-################################################################################################
-library(glmtoolbox)
+
+
+
+# Modelos para variable de consumo en los ultimos 12 meses ----------------
+
+
+
 
 #Modelos para tabaco ----
 mod_taba_1<-glm(E_04~.-Depmuni,family=poisson(log),data=ecapitulos%>%inner_join(tabla_total2, by='Depmuni'))
@@ -61,6 +84,7 @@ summary(mod_taba_4)
 envelope(mod_taba_4,type="quantile")
 plot(cooks.distance(mod_taba_4),type="h",main="Distancia de cook para Tabaco")
 
+
 #Modelos para Alcohol ----
 mod_alc_1<-glm(F_06~.-Depmuni,family=poisson(log),data=fcapitulos%>%inner_join(tabla_total2, by='Depmuni'))
 stepCriterion(mod_alc_1)
@@ -80,6 +104,7 @@ adjR2(mod_alc_1,mod_alc_6)
 set.seed(12192129)
 envelope(mod_alc_4,type="quantile")
 plot(cooks.distance(mod_alc_4),type="h",main="Distancia de cook para Alcohol")
+
 
 #Modelos para marihuana ----
 mod_mari_1<-glm(K_03~.-Depmuni,family=poisson(log),data=kcapitulos%>%inner_join(tabla_total2, by='Depmuni'))
@@ -101,6 +126,8 @@ summary(mod_mari_5)
 set.seed(12192129)
 envelope(mod_mari_4,type="quantile")
 #plot(residuals2(mod_mari_6))
+
+
 #Modelos para cocaina ----
 mod_coca_1<-glm(L_02~.-Depmuni,family=poisson(log),data=lcapitulos%>%inner_join(tabla_total2, by='Depmuni'))
 stepCriterion(mod_coca_1)
