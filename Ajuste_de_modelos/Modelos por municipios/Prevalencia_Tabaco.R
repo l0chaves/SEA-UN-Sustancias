@@ -30,7 +30,16 @@ tabla_total2 <- tabla_total %>%
   select(-which(colnames(tabla_total) %in% colnames(respuestas_por_muni) & colnames(tabla_total) != "Depmuni"))%>%
   select(-c(4:22))
 tabla_total2<-within(tabla_total2, Depmuni<-as.numeric(Depmuni)) 
-########################################################################
+
+
+# Conviritiendo regresores en porcentajes ---------------------------------
+
+str(tabla_total2)
+tabla_total2 <- tabla_total2 %>%
+  mutate(across(.cols = -c(Depmuni, poblacion), .fns = ~ round(100 * . / poblacion, 3)))
+
+# Cargando bases de datos de la ENCSPA ------------------------------------
+
 
 #codigo de municipios:
 setwd("C:/Users/jufem/OneDrive/Documentos/GitHub/SEMILLERO-SEA-UN/Datos_originales")
@@ -63,7 +72,7 @@ summary(lcapitulos)
 mod_taba_1<-glm(E_04~.-Depmuni -poblacion,offset=log(poblacion),family=poisson(log),data=ecapitulos%>%inner_join(tabla_total2, by='Depmuni'))
 stepCriterion(mod_taba_1)
 #Incluyendo variables de control forsozamente:
-Formula1= E_04~ SEXO.x_1+SEXO.x_2+ D2_01_2 + D2_01_4 + D2_05_9 + D2_01_1 + D2_05_8 + D_07_9 + D_02_7 + D2_05_7 + D_07_3 + D2_05_3 + D_01_2 + D_02_6 + D2_05_4 + D2_01_9 + D_02_5 + D_02_8 + D2_05_6 + D2_01_5 + D2_05_1 + D_02_3 + D_02_4 + D_07_2 + D_02_2  + D2_05_2  
+Formula1= E_04~ SEXO.x_1+SEXO.x_2+ D2_01_9 + D2_05_8 + D2_01_2 + D_02_5 + D_07_9 + D_02_2 + D_02_4 + D2_05_3 + D_07_3 + D2_05_4 + D_02_6 + D2_05_2 + D2_05_7 + D_02_7 + D2_01_3 + D2_05_5 + D2_01_5 + D2_05_9 + D2_01_4 + SEXO.x_1 + D_02_8 + D2_05_6 + D_07_2 + D_07_1 + D_01_1 
 mod_taba_1<-update(mod_taba_1,formula=Formula1)
 summary(mod_taba_1)
 set.seed(12192129)
@@ -76,9 +85,9 @@ mod_taba_4<-update(mod_taba_2,family="ztnb2")
 mod_taba_5<-update(mod_taba_2,family="ztnbf")
 mod_taba_6<-update(mod_taba_1,family=quasipoisson())
 AIC(mod_taba_1,mod_taba_2,mod_taba_3,mod_taba_4,mod_taba_5,mod_taba_6) #modelo escogido 4 BNII 
-summary(mod_taba_4)
+summary(mod_taba_3)
 envelope(mod_taba_4,type="quantile")
-plot(cooks.distance(mod_taba_4),type="h",main="Distancia de cook para Tabaco")
+plot(cooks.distance(mod_taba_3),type="h",main="Distancia de cook para Tabaco")
 
 
 
