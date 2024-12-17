@@ -58,7 +58,7 @@ tabla_total2<-within(tabla_total2, Depmuni<-as.numeric(Depmuni))
 
 str(tabla_total2)
 tabla_total2 <- tabla_total2 %>%
-  mutate(across(.cols = -c(Depmuni, poblacion), .fns = ~ round(100 * . / 49760, 3)))   #poblacion o 49760 (# personas que respondieron la encuesta)
+  mutate(across(.cols = -c(Depmuni, poblacion), .fns = ~ round(100 * . / 49760, 3)))   # 49760 (# personas que respondieron la encuesta)              poblacion
 
 #Uniendo con Municipios
 Municipios<-within(Municipios, Depmuni<-as.numeric(Depmuni)) 
@@ -151,8 +151,92 @@ plot(cooks.distance(mod_taba_3),type="h",main="Distancia de cook para Tabaco")
 
 
 # Modelos para alcohol ----------------------------------------------------
+alcohol<-fcapitulos%>%inner_join(tabla_total2, by='Depmuni')
+plot(with(alcohol, 100*F_06/Poblacion))
+
+Formula2<-F_06~.-Depmuni -poblacion-Superficie-Viviendas2019
+mod_alc_1_1<-glm(Formula2,offset=log(poblacion),family=poisson(log),data=alcohol)
+#Incluyendo variables de control forsozamente:
+mod_alc_1 <- step(mod_alc_1_1, direction = "both", scope = list(lower = . ~ Densidad_Pob + Densidad_Vivienda))
+summary(mod_alc_1)
+#Envelope
+set.seed(12192129)
+envelope(mod_alc_1,type="quantile") 
+#como no hay ceros, se usa modelos truncados
+mod_alc_2<-overglm( F_06 ~ SEXO.x_1 + SEXO.x_2 + D_02_1 + D_02_2 + 
+                         D_02_3 + D_02_4 + D_02_5 + D_02_6 + D_02_7 + D_02_8 + D_07_1 + 
+                         D_07_3 + D_07_9 + D_07_na + D2_01_1 + D2_01_2 + Densidad_Vivienda + 
+                         Densidad_Pob+offset(log(poblacion)),data=alcohol,family = "ztpoi")
+
+summary(mod_alc_2)
+
+mod_alc_3<-update(mod_alc_2,family="ztnb1")
+mod_alc_4<-update(mod_alc_2,family="ztnb2")
+mod_alc_5<-update(mod_alc_2,family="ztnbf")
+mod_alc_6<-update(mod_alc_1,family=quasipoisson())
+
+AIC(mod_alc_1,mod_alc_2,mod_alc_3,mod_alc_4,mod_alc_5,mod_alc_6) #modelo escogido 4 BNII 
+adjR2(mod_alc_1,mod_alc_6)
 
 
-mod_alc_1<-glm(F_06~.-Depmuni -poblacion,offset=log(poblacion),family=poisson(log),data=fcapitulos%>%inner_join(tabla_total2, by='Depmuni'))
-stepCriterion(mod_alc_1)
+
+
+
+# Modelos para Marihuana --------------------------------------------------
+marihuana<-kcapitulos%>%inner_join(tabla_total2, by='Depmuni')
+Formula3<-K_03~.-Depmuni -poblacion-Superficie-Viviendas2019+offset(log(poblacion))
+mod_mari_1_1<-glm(Formula3,family=poisson(log),data=marihuana)
+#Incluyendo variables de control forsozamente:
+mod_mari_1 <- step(mod_mari_1_1, direction = "both", scope = list(lower = . ~ Densidad_Pob + Densidad_Vivienda))
+
+Formula3<-K_03 ~ SEXO.x_1 + SEXO.x_2 + D_02_1 + D_02_2 + 
+  D_02_6 + D_02_8 + Densidad_Vivienda + Densidad_Pob + offset(log(poblacion))
+
+
+set.seed(12192129)
+envelope(mod_mari_1,type="quantile") 
+
+#como no hay ceros, se usa modelo truncado
+mod_mari_2<-overglm(Formula3,data=marihuana,family = "ztpoi")
+mod_mari_3<-update(mod_mari_2,family="ztnb1")
+mod_mari_5<-update(mod_mari_2,family="ztnbf")
+mod_mari_6<-update(mod_mari_1,family=quasipoisson())
+AIC(mod_mari_1,mod_mari_2,mod_mari_3,mod_mari_5,mod_mari_6) #Modelo escogido segun aic ztnbf
+adjR2(mod_mari_1,mod_mari_6)
+
+summary(mod_mari_2)
+set.seed(12192129)
+envelope(mod_mari_3,type="quantile")
+
+
+
+# Modelos para caocaina ---------------------------------------------------
+
+
+cocaina<-lcapitulos%>%inner_join(tabla_total2, by='Depmuni')
+Formula4_1<-L_02~.-Depmuni -poblacion-Superficie-Viviendas2019+offset(log(poblacion))
+mod_coca_1_1<-glm(Formula4_1,family=poisson(log),data=cocaina)
+mod_coca_1 <- step(mod_coca_1_1, direction = "both", scope = list(lower = . ~ Densidad_Pob + Densidad_Vivienda))
+summary(mod_coca_1)
+set.seed(12192129)
+envelope(mod_coca_1,type="quantile") #Hay subdispersion muy densa
+
+#Formula4<-L_02 ~ D_01_1 + D_02_1 + Densidad_Vivienda + Densidad_Pob+offset(log(poblacion))
+#como no hay ceros, se usa modelo truncado
+mod_coca_2<-overglm(Formula4,data=lcapitulos%>%inner_join(tabla_total2, by='Depmuni'),family = "ztpoi")
+mod_coca_2<-overglm(Formula4_1,data=lcapitulos%>%inner_join(tabla_total2, by='Depmuni'),family = "ztpoi")
+
+
+
+
+mod_coca_3<-update(mod_coca_2,family="ztnb1") #no se tiene en cuenta
+mod_coca_4<-update(mod_coca_2,family="ztnb2") #sistema es computacionalmente singular
+mod_coca_5<-update(mod_coca_2,family="ztnbf") #modelo apropiado para subdispersion
+mod_coca_6<-update(mod_coca_1,family=quasipoisson())
+AIC(mod_coca_1,mod_coca_2,mod_coca_3,mod_coca_5,mod_coca_6) 
+adjR2(mod_coca_1,mod_coca_6) #escogeremos el de quasiverosimilitud
+
+
+summary(mod_coca_1)
+
 
