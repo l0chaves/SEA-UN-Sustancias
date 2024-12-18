@@ -58,7 +58,7 @@ tabla_total2<-within(tabla_total2, Depmuni<-as.numeric(Depmuni))
 
 str(tabla_total2)
 tabla_total2 <- tabla_total2 %>%
-  mutate(across(.cols = -c(Depmuni, poblacion), .fns = ~ round(100 * . / 49760, 3)))   # 49760 (# personas que respondieron la encuesta)              poblacion
+  mutate(across(.cols = -c(Depmuni, poblacion), .fns = ~ round(100 * . / 59977, 3)))   # 59977 (# personas que respondieron la encuesta)              poblacion
 
 #Uniendo con Municipios
 Municipios<-within(Municipios, Depmuni<-as.numeric(Depmuni)) 
@@ -204,6 +204,7 @@ mod_mari_6<-update(mod_mari_1,family=quasipoisson())
 AIC(mod_mari_1,mod_mari_2,mod_mari_3,mod_mari_5,mod_mari_6) #Modelo escogido segun aic ztnbf
 adjR2(mod_mari_1,mod_mari_6)
 
+summary(mod_mari_1)
 summary(mod_mari_2)
 set.seed(12192129)
 envelope(mod_mari_3,type="quantile")
@@ -221,10 +222,10 @@ summary(mod_coca_1)
 set.seed(12192129)
 envelope(mod_coca_1,type="quantile") #Hay subdispersion muy densa
 
-#Formula4<-L_02 ~ D_01_1 + D_02_1 + Densidad_Vivienda + Densidad_Pob+offset(log(poblacion))
+Formula4<-L_02 ~ D_01_1 + D_02_1 + Densidad_Vivienda + Densidad_Pob+offset(log(poblacion))
 #como no hay ceros, se usa modelo truncado
 mod_coca_2<-overglm(Formula4,data=lcapitulos%>%inner_join(tabla_total2, by='Depmuni'),family = "ztpoi")
-mod_coca_2<-overglm(Formula4_1,data=lcapitulos%>%inner_join(tabla_total2, by='Depmuni'),family = "ztpoi")
+#mod_coca_2<-overglm(Formula4_1,data=lcapitulos%>%inner_join(tabla_total2, by='Depmuni'),family = "ztpoi")
 
 
 
