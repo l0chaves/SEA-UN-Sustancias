@@ -44,11 +44,6 @@ fitK_mm <- clmm2(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
               Hess = TRUE, 
               link = "probit")
 
-fit3K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                   K_12_O + K_10_C + K_12_I + SEXO + D_02 + K_10_D + K_12_H + 
-                   K_11 + K_10_E + TOTAL_PERSONAS + K_12_C + EDAD + 
-                   K_10_I + D_01,, data = MD_K, link = "probit")
-
 
 summary(fitK_mm)
 summary(fit3K_ord) #Ajuste de modelos/ordinal/probit/K
@@ -69,7 +64,9 @@ categorizar <- function(x, Qp) {
   }
 }
 
-#creo la matriz diseño con solo las variables seleccionadas en el modelo
+
+#creo la matriz diseno con solo las variables seleccionadas en el modelo
+
 hat_X <- MD_K %>% select(K_04, FG_01, G_02, D_11, G_11, D_09, 
                          K_12_O, K_10_C, K_12_I, SEXO, D_02, K_10_D, K_12_H, 
                          K_11, K_10_E, TOTAL_PERSONAS, K_12_C, EDAD, 
@@ -84,7 +81,9 @@ hat_yF <- hat_X %*% betaF
 QpF <- fit3K_ord$alpha #los puntos de corte interceptos estimados
 
 categoriasF <- sapply(hat_yF, categorizar, QpF)
-pred_fijos <- as.data.frame(cbind(MD_K$K_04, categoriasF, hat_yF))
+
+pred_fijos <- as.data.frame(cbind(MD_K$K_04, categoriasF, hat_yF)) 
+
 
 #matriz de confusión con los valores reales en las filas, predichos columnas
 CM_fijos <- table(pred_fijos$V1, pred_fijos$categoriasF)
