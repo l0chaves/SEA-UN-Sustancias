@@ -1,10 +1,10 @@
 load("Limpieza_tablas/tablas.RData")
+source("Ajuste_de_modelos/variables de control.R")
 rm(list = setdiff(ls(), c("C_l", "control", "d", "d2", "encuestas")))
 
 library("MASS")
 library("dplyr")
 library("DescTools")
-library("ordinal")
 library("ordinal")
 library("car")
 library("PResiduals")
@@ -56,7 +56,7 @@ scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
 stepAIC(fitCL, scope=scope, direction = "forward")
 
 
-### 1 AIC: 738.6616 ----
+### 2 AIC: 738.6616 ----
 fit2L_mass <- polr(formula = factor(L_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
        L_09_C + EDAD + D_07 + D_02, data = MD_L, Hess = TRUE, method = "probit")
 summary(fit2L_mass)  
@@ -77,9 +77,8 @@ fit3L_ord <- clm(formula = factor(L_03) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
                    data = MD_L, link = "probit")
 summary(fit3L_ord)
 
-<<<<<<< Updated upstream
+
 #### pruebas ----
-=======
 # ---------------------------------------------------------------------------- #
 ## Categorizando Edad ----
 # ---------------------------------------------------------------------------- #
@@ -121,17 +120,19 @@ summary(fit4L_ord)
 
 ## Multicolinealidad ----
 
->>>>>>> Stashed changes
+
+#  Validación ----
 vif(fit3L_mass)
 vif(fit4L_mass)
 
+
 # ---------------------------------------------------------------------------- #
 
-<<<<<<< Updated upstream
-=======
 ## residuales ----
 ### fit3 ----
->>>>>>> Stashed changes
+
+## residuales ----
+
 pres <- presid(fit3L_mass)
 
 p1 <- ggplot(data.frame(y = pres), aes(sample = y)) +
@@ -170,8 +171,7 @@ p2 <- ggplot(data.frame(y = sres_f4), aes(sample = y)) +
   ylab("Theoretical quantile") + ggtitle("QQ-plot - Cocaine (Surrogate)"); p2
 
 grid.arrange(p1, p2, ncol = 2)
-<<<<<<< Updated upstream
-=======
+
 
 ## matriz de confusión ----
 # Copiado del modelo de efectos mixtos
@@ -207,6 +207,7 @@ pred <- as.data.frame(cbind(MD_L$L_03, categorias, hat_y))
 
 #matriz de confusión con los valores reales en las filas, predichos columnas
 CM_fit3 <- table(pred$V1, pred$categorias)
+
 
 ### fit4 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
@@ -244,4 +245,3 @@ pred_control <- as.data.frame(cbind(MD_L$L_03, categorias_c, hat_yc))
 #matriz de confusión con los valores reales en las filas, predichos columnas
 CM_control <- table(pred_control$V1, pred_control$categorias)
 
->>>>>>> Stashed changes

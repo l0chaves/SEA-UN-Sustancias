@@ -1,5 +1,7 @@
 load("Limpieza_tablas/tablas.RData")
+
 source('Ajuste_de_modelos/variables de control.R')
+
 rm(list = setdiff(ls(), c("C_k", "control", "d", "d2", "encuestas")))
 
 library("MASS")
@@ -10,11 +12,9 @@ library("car")
 library("PResiduals")
 library("ggplot2")
 library("sure")
-<<<<<<< Updated upstream
-=======
 library("sqldf")
 
->>>>>>> Stashed changes
+
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 
@@ -93,9 +93,8 @@ fit3K_ord <- clm(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
 summary(fit3K_mass)
 summary(fit3K_ord)
 
-<<<<<<< Updated upstream
+
 #### pruebas ----
-=======
 # ---------------------------------------------------------------------------- #
 ## Categorizando Edad ----
 # ---------------------------------------------------------------------------- #
@@ -154,7 +153,8 @@ summary(fit5K_ord)
 # ---------------------------------------------------------------------------- #
 
 ## Multicolinealidad ----
->>>>>>> Stashed changes
+
+# Validacion ----
 vif(fit3K_mass)
 vif(fit4K_mass)
 vif(fit5K_mass)
@@ -162,11 +162,11 @@ vif(fit5K_mass)
 
 # ---------------------------------------------------------------------------- #
 
-<<<<<<< Updated upstream
-=======
+
 ## residuales ----
 ### fit3 ----
->>>>>>> Stashed changes
+
+## residuales ----
 # Obtain the SBS/probability-scale residuals
 pres <- presid(fit3K_mass)
 
@@ -187,8 +187,7 @@ p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
 
 grid.arrange(p1, p2, ncol = 2)
 
-<<<<<<< Updated upstream
-=======
+
 ### fit5 ----
 # Obtain the SBS/probability-scale residuals
 pres_f5 <- presid(fit5K_mass)
@@ -214,6 +213,8 @@ grid.arrange(p1, p2, ncol = 2)
 # ---------------------------------------------------------------------------- #
 
 ## matriz de confusión ----
+
+# Copiado del modelo de efectos mixtos
 # Función para categorizar
 categorizar <- function(x, Qp) {
   if (x < Qp[1]) {
@@ -239,6 +240,7 @@ hat_X <- model.matrix(K_04 ~ ., hat_X)
 hat_X <- hat_X[,2:28] # - el intercepto
 
 beta <- fit3K_ord$beta
+
 
 hat_y_f3 <- hat_X %*% beta
 Qp <- fit3K_ord$alpha #los puntos de corte interceptos estimados
@@ -270,6 +272,7 @@ pred_f5 <- as.data.frame(cbind(MD_Kc$K_04, categorias_f5, hat_y_f5))
 #matriz de confusión con los valores reales en las filas, predichos columnas
 CM_fit5 <- table(pred_f5$V1, pred_f5$categorias_f5)
 
+
 ### fitC ----
 fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
              data = MD_K, link = "probit")
@@ -287,5 +290,3 @@ pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
 
 #matriz de confusión con los valores reales en las filas, predichos columnas
 CM_control <- table(pred_control$V1, pred_control$categorias)
-
->>>>>>> Stashed changes
