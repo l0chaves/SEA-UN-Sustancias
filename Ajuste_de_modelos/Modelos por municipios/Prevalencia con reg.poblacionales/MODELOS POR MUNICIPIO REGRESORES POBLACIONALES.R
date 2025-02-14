@@ -91,6 +91,10 @@ fit<-update(mod_taba_4,~ Indigena + Densidad + Young + Adult + Teenagers + Third
 stepCriterion(mod_taba_1)
 summary(fit)
 
+#Comparando estimaciones
+round(cbind(mod_taba_1$coefficients,mod_taba_2$coefficients),5)
+
+#selected ZTNB1!
 
 # Modelos de alcohol ------------------------------------------------------
 
@@ -119,6 +123,8 @@ mod_alc_4<-update(mod_alc_2,family="ztnbf(log)")
 
 AIC(mod_alc_1,mod_alc_2,mod_alc_3,mod_alc_4)
 summary(mod_alc_4)
+#Comparando estimaciones
+round(cbind(mod_alc_1$coefficients,mod_alc_4$coefficients ),5)
 
 stepCriterion(mod_alc_4)
 
@@ -127,12 +133,64 @@ mod_alc_4_2<-update(mod_alc_4,~ Superficie + `Ningún grupo étnico-racial` + `N
 anova(mod_alc_4_1,mod_alc_4_2)#No se mete a las mujeres
 summary(mod_alc_4_1)
 
+#selected ZTNBf!
 
 
 # Modelos de marihuana ----------------------------------------------------
 marihuana<-kcapitulos%>%inner_join(Regresores, by='MPIO')
 Formula3<-K_03~.-MPIO-DPMP -Poblacion-Viviendas2019+Densidad+Densidad_Vivienda
-mod_alc_1_1<-glm(Formula3,offset=log(Poblacion),family=poisson(log),data=marihuana)
+mod_mari_1_1<-glm(Formula3,offset=log(Poblacion),family=poisson(log),data=marihuana)
+summary(mod_mari_1_1)
+mod_mari_1<-step(mod_mari_1_1,direction = "both", scope = list(lower = . ~ Densidad + Densidad_Vivienda))
+summary(mod_mari_1)
+set.seed(457)
+envelope(mod_mari_1)#Subdispersion
+
+mod_mari_2<-overglm(formula = K_03 ~ Teenagers + Young + Young_Adult + Elderly + 
+      Third_Age + Indigena + `Gitano(a) o Rrom` + `Raizal del Archipiélago` + 
+      `Palenquero de San Basilio` + `Negro(a), mulato(a), afrodescendiente` + 
+      `Ningún grupo étnico-racial` + Superficie + Densidad + 
+      Densidad_Vivienda, family = "ztnb1", data = marihuana, 
+    offset = log(Poblacion))#Convergence not achieved!! 
+envelope(mod_mari_2) #mejora
+mod_mari_3<-update(mod_mari_2,family="ztnb2")
+mod_mari_4<-update(mod_mari_2,family="ztnbf(log)")
+AIC(mod_mari_1,mod_mari_2,mod_mari_3,mod_mari_4)#mod2 559.0117
 
 
+summary(mod_mari_2) #mayoria de matametros no significativos, usaremos el mismo modelo, pero con stepaic
+#Comparando estimaciones
+round(cbind(mod_mari_1$coefficients,mod_mari_2$coefficients),5)
 
+  
+#mod_mari_5<-update(mod_mari_2,fomula=Formula3)
+  #summary(mod_mari_5)
+  #mod_mari_6<-stepCriterion(mod_mari_5,direction = "forward", scope = list(lower = . ~ Densidad + Densidad_Vivienda))
+
+#selected ZTNB1!
+
+
+# MOdelos cocaina ---------------------------------------------------------
+coca<-lcapitulos%>%inner_join(Regresores, by='MPIO')
+Formula4<-L_02~.-MPIO-DPMP -Poblacion-Viviendas2019+Densidad+Densidad_Vivienda
+mod_coca_1_1<-glm(Formula4,offset=log(Poblacion),family=poisson(log),data=coca)
+#Incluyendo variables de control forsozamente:
+mod_coca_1 <- step(mod_coca_1_1, direction = "both", scope = list(lower = . ~ Densidad + Densidad_Vivienda))
+summary(mod_coca_1)
+set.seed(123)
+envelope(mod_coca_1,residuals="standarized")#sobredispersion 
+#Modelos para sobrdiseprsion
+mod_coca_2<-overglm(formula= L_02 ~ Teenagers + Adult + Elderly + Indigena + `Gitano(a) o Rrom` + 
+                      `Palenquero de San Basilio` + Superficie + Densidad + Densidad_Vivienda, family = "ztnb1(log)", 
+                    data = coca, offset = log(Poblacion))
+mod_coca_3<-update(mod_coca_2,family="ztnb2")
+mod_coca_4<-update(mod_coca_2,family="ztnbf")
+
+AIC(mod_coca_1,mod_coca_2,mod_coca_3,mod_coca_4) #Me quedo con el segundo
+
+summary(mod_coca_2)
+envelope(mod_coca_2,residuals="quantile")
+#Comparando estimaciones
+round(cbind(mod_coca_1$coefficients,mod_coca_2$coefficients),5)
+
+#selected ZTNB1!
