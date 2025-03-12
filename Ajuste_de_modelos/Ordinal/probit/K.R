@@ -1,7 +1,5 @@
 load("Limpieza_tablas/tablas.RData")
-
 source('Ajuste_de_modelos/variables de control.R')
-
 rm(list = setdiff(ls(), c("C_k", "control", "d", "d2", "encuestas")))
 
 library("MASS")
@@ -93,8 +91,6 @@ fit3K_ord <- clm(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
 summary(fit3K_mass)
 summary(fit3K_ord)
 
-
-#### pruebas ----
 # ---------------------------------------------------------------------------- #
 ## Categorizando Edad ----
 # ---------------------------------------------------------------------------- #
@@ -150,23 +146,38 @@ summary(fit5K_ord)
 # ---------------------------------------------------------------------------- #
 # Validación ----
 
-# ---------------------------------------------------------------------------- #
-
-## Multicolinealidad ----
-
-# Validacion ----
-vif(fit3K_mass)
-vif(fit4K_mass)
-vif(fit5K_mass)
-
-
-# ---------------------------------------------------------------------------- #
+validacion = function(fit_mass, fit_ord){
+  ## Multicolinealidad ----
+  multicolinealidad = vif(fit_mass)
+  print(multicolinealidad)
+  
+  ## residuales ----
+  # Obtain the SBS/probability-scale residuals
+  pres <- presid(fit_mass)
+  
+  p1 <- ggplot(data.frame(y = pres), aes(sample = y)) +
+    stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
+    xlab("Sample quantile") +
+    ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)"); print(p1)
+  
+  set.seed(101) # for reproducibility
+  sres <- resids(fit_mass)
+  
+  p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
+    stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
+    xlab("Sample quantile") +
+    ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); print(p2)
+  
+  grid.arrange(p1, p2, ncol = 2)
+  
+}
 
 
 ## residuales ----
 ### fit3 ----
 
-## residuales ----
 # Obtain the SBS/probability-scale residuals
 pres <- presid(fit3K_mass)
 
@@ -213,8 +224,6 @@ grid.arrange(p1, p2, ncol = 2)
 # ---------------------------------------------------------------------------- #
 
 ## matriz de confusión ----
-
-# Copiado del modelo de efectos mixtos
 # Función para categorizar
 categorizar <- function(x, Qp) {
   if (x < Qp[1]) {
@@ -240,7 +249,6 @@ hat_X <- model.matrix(K_04 ~ ., hat_X)
 hat_X <- hat_X[,2:28] # - el intercepto
 
 beta <- fit3K_ord$beta
-
 
 hat_y_f3 <- hat_X %*% beta
 Qp <- fit3K_ord$alpha #los puntos de corte interceptos estimados
@@ -272,7 +280,6 @@ pred_f5 <- as.data.frame(cbind(MD_Kc$K_04, categorias_f5, hat_y_f5))
 #matriz de confusión con los valores reales en las filas, predichos columnas
 CM_fit5 <- table(pred_f5$V1, pred_f5$categorias_f5)
 
-
 ### fitC ----
 fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
              data = MD_K, link = "probit")
@@ -280,6 +287,59 @@ fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
 hat_Xc <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09)
 hat_Xc <- model.matrix(K_04 ~ ., hat_Xc)
 hat_Xc <- hat_Xc[,-1] # - el intercepto
+
+beta_c <- fitCK$beta
+hat_yc <- hat_Xc %*% beta_c
+Qp_c <- fitCK$alpha #los puntos de corte intercepto estimados
+
+categorias_c <- sapply(hat_yc, categorizar, Qp_c)
+pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
+
+#matriz de confusión con los valores reales en las filas, predichos columnas
+CM_control <- table(pred_control$V1, pred_control$categorias)
+
+
+#######
+get_diagonal <- function(mat, shift) {
+  n <- nrow(mat)
+  m <- ncol(mat)
+  if (shift >= 0) {
+    return(diag(mat[ , (1+shift):m, drop = FALSE]))
+  } else {
+    return(diag(mat[(1-shift):n, , drop = FALSE]))
+  }
+}
+
+
+CM_cumsum <- function(conf_matrix){
+  cumulative_sums <- numeric()
+  max_shift <- nrow(conf_matrix) - 1
+  
+  for (shift in 0:max_shift) {
+    main_diag <- sum(get_diagonal(conf_matrix, shift))  # Above or main diagonal
+    off_diag <- if (shift > 0) sum(get_diagonal(conf_matrix, -shift)) else 0  # Below main diagonal
+    cumulative_sums <- c(cumulative_sums, sum(cumulative_sums[length(cumulative_sums)], main_diag, off_diag, na.rm = TRUE))
+  }
+  return(cumulative_sums)
+}
+
+Accuracy_fit3 <- cbind(CM_cumsum(CM_fit3)/1210, c(1:5))
+Accuracy_fit5 <- cbind(CM_cumsum(CM_fit5)/1210, c(1:5))
+CM_control1 <- cbind("1"=rep(0, 5), CM_control)
+Accuracy_fitC <- cbind(CM_cumsum(CM_control1)/1210, c(1:5))
+
+plot(y=Accuracy_fit3[,1], x=Accuracy_fit3[,2])
+plot(y=Accuracy_fit5[,1], x=Accuracy_fit5[,2])
+plot(y=Accuracy_fitC[,1], x=Accuracy_fitC[,2])
+
+plot(x= c(1:5), y=Accuracy_fit3[,1], type = "o", col = "blue", pch = 16, ylim = c(0, 1), 
+     xlab = "Distancia", ylab = "Accuracy", main = "")
+lines(x= c(1:5), y= Accuracy_fit5[,1], type = "o", col = "red", pch = 17)
+lines(x= c(1:5), y= Accuracy_fitC[,1], type = "o", col = "green", pch = 18)
+
+# Agregar leyenda
+legend("bottomright", legend = c("fit 3", "fit 5", "Control"), 
+       col = c("blue", "red", "green"), pch = c(16, 17, 18), lty = 1)
 
 beta_c <- fitCK$beta
 hat_yc <- hat_Xc %*% beta_c
