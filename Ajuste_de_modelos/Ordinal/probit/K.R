@@ -146,85 +146,7 @@ summary(fit5K_ord)
 # ---------------------------------------------------------------------------- #
 # Validación ----
 
-validacion = function(fit_mass, fit_ord){
-  ## Multicolinealidad ----
-  multicolinealidad = vif(fit_mass)
-  print(multicolinealidad)
-  
-  ## residuales ----
-  # Obtain the SBS/probability-scale residuals
-  pres <- presid(fit_mass)
-  
-  p1 <- ggplot(data.frame(y = pres), aes(sample = y)) +
-    stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-    geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
-    xlab("Sample quantile") +
-    ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)"); print(p1)
-  
-  set.seed(101) # for reproducibility
-  sres <- resids(fit_mass)
-  
-  p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
-    stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-    geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
-    xlab("Sample quantile") +
-    ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); print(p2)
-  
-  grid.arrange(p1, p2, ncol = 2)
-  
-}
-
-
-## residuales ----
-### fit3 ----
-
-# Obtain the SBS/probability-scale residuals
-pres <- presid(fit3K_mass)
-
-p1 <- ggplot(data.frame(y = pres), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)");p1
-
-set.seed(101) # for reproducibility
-sres <- resids(fit3K_mass)
-
-p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); p2
-
-grid.arrange(p1, p2, ncol = 2)
-
-
-### fit5 ----
-# Obtain the SBS/probability-scale residuals
-pres_f5 <- presid(fit5K_mass)
-
-p1 <- ggplot(data.frame(y = pres_f5), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "#6B8E23", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)");p1
-
-set.seed(101) # for reproducibility
-sres_f5 <- resids(fit5K_mass)
-
-p2 <- ggplot(data.frame(y = sres_f5), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "#6B8E23", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); p2
-
-grid.arrange(p1, p2, ncol = 2)
-
-
-# ---------------------------------------------------------------------------- #
-
-## matriz de confusión ----
-# Función para categorizar
+# Función para categorizar en la matriz de confusión
 categorizar <- function(x, Qp) {
   if (x < Qp[1]) {
     return("1")
@@ -239,67 +161,7 @@ categorizar <- function(x, Qp) {
   }
 }
 
-### fit3 ----
-#creo la matriz diseño con solo las variables seleccionadas en el modelo
-hat_X <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
-                         K_12_O, K_10_C, K_12_I, SEXO, D_02, K_10_D, K_12_H, 
-                         K_11, K_10_E, TOTAL_PERSONAS, K_12_C, EDAD, 
-                         K_10_I, D_01)
-hat_X <- model.matrix(K_04 ~ ., hat_X)
-hat_X <- hat_X[,2:28] # - el intercepto
-
-beta <- fit3K_ord$beta
-
-hat_y_f3 <- hat_X %*% beta
-Qp <- fit3K_ord$alpha #los puntos de corte interceptos estimados
-
-categorias_f3 <- sapply(hat_y_f3, categorizar, Qp)
-pred_f3 <- as.data.frame(cbind(MD_K$K_04, categorias_f3, hat_y_f3))
-
-#matriz de confusión con los valores reales en las filas, predichos columnas
-CM_fit3 <- table(pred_f3$V1, pred_f3$categorias_f3)
-
-
-### fit5 ----
-#creo la matriz diseño con solo las variables seleccionadas en el modelo
-hat_X <- MD_Kc %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
-                                   K_12_O, K_10_C, CEDAD, K_12_I, K_10_D, SEXO, 
-                                   K_11, K_12_H, K_10_E, K_12_C, TOTAL_PERSONAS, K_10_I, 
-                                   D_01, K_12_K,)
-hat_X <- model.matrix(K_04 ~ ., hat_X)
-hat_X <- hat_X[,-1] # - el intercepto
-
-beta <- fit5K_ord$beta
-
-hat_y_f5 <- hat_X %*% beta
-Qp <- fit5K_ord$alpha #los puntos de corte interceptos estimados
-
-categorias_f5 <- sapply(hat_y_f5, categorizar, Qp)
-pred_f5 <- as.data.frame(cbind(MD_Kc$K_04, categorias_f5, hat_y_f5))
-
-#matriz de confusión con los valores reales en las filas, predichos columnas
-CM_fit5 <- table(pred_f5$V1, pred_f5$categorias_f5)
-
-### fitC ----
-fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
-             data = MD_K, link = "probit")
-
-hat_Xc <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09)
-hat_Xc <- model.matrix(K_04 ~ ., hat_Xc)
-hat_Xc <- hat_Xc[,-1] # - el intercepto
-
-beta_c <- fitCK$beta
-hat_yc <- hat_Xc %*% beta_c
-Qp_c <- fitCK$alpha #los puntos de corte intercepto estimados
-
-categorias_c <- sapply(hat_yc, categorizar, Qp_c)
-pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
-
-#matriz de confusión con los valores reales en las filas, predichos columnas
-CM_control <- table(pred_control$V1, pred_control$categorias)
-
-
-#######
+#Funciones para obtener los gráficos de accuracy
 get_diagonal <- function(mat, shift) {
   n <- nrow(mat)
   m <- ncol(mat)
@@ -322,6 +184,98 @@ CM_cumsum <- function(conf_matrix){
   }
   return(cumulative_sums)
 }
+
+
+validacion = function(fit_mass, fit_ord, hat_X){
+  ## Multicolinealidad ----
+  multicol = vif(fit_mass)
+  print(multicol)
+  
+  ## residuales ----
+  # Obtain the SBS/probability-scale residuals
+  pres <- presid(fit_mass)
+  
+  p1 <- ggplot(data.frame(y = pres), aes(sample = y)) +
+    stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
+    xlab("Sample quantile") +
+    ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)"); print(p1)
+  
+  set.seed(101) # for reproducibility
+  sres <- resids(fit_mass)
+  
+  p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
+    stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
+    xlab("Sample quantile") +
+    ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); print(p2)
+  
+  residual <- grid.arrange(p1, p2, ncol = 2); residual
+  
+  ## Matriz de confusión ----
+  beta <- fit_ord$beta
+  hat_y <- hat_X %*% beta
+  Qp <- fit_ord$alpha #los puntos de corte interceptos estimados
+  
+  categorias <- sapply(hat_y, categorizar, Qp)
+  pred <- as.data.frame(cbind(MD_K$K_04, categorias, hat_y))
+  
+  #matriz de confusión con los valores reales en las filas, predichos columnas
+  CM <- table(pred$V1, pred$categorias); CM 
+  
+  ## Accuracy ----
+  
+  Accuracy <- cbind(CM_cumsum(CM)/1210, c(1:5))
+  
+  plot(y=Accuracy[,1], x=Accuracy[,2])
+  plot(x= c(1:5), y=Accuracy_fit3[,1], type = "o", col = "blue", pch = 16, ylim = c(0, 1), 
+       xlab = "Distancia", ylab = "Presicion", main = "")
+  
+  results = list(multicol, residual, confusion = CM, Accuracy)
+  return(results)
+}
+
+# ---------------------------------------------------------------------------- #
+#### fit3 ----
+#creo la matriz diseño con solo las variables seleccionadas en el modelo
+hat_X <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
+                         K_12_O, K_10_C, K_12_I, SEXO, D_02, K_10_D, K_12_H, 
+                         K_11, K_10_E, TOTAL_PERSONAS, K_12_C, EDAD, 
+                         K_10_I, D_01)
+hat_X <- model.matrix(K_04 ~ ., hat_X)
+hat_X <- hat_X[,2:28] # - el intercepto
+
+
+#### fit5 ----
+#creo la matriz diseño con solo las variables seleccionadas en el modelo
+hat_X5 <- MD_Kc %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
+                                   K_12_O, K_10_C, CEDAD, K_12_I, K_10_D, SEXO, 
+                                   K_11, K_12_H, K_10_E, K_12_C, TOTAL_PERSONAS, K_10_I, 
+                                   D_01, K_12_K,)
+hat_X5 <- model.matrix(K_04 ~ ., hat_X5)
+hat_X5 <- hat_X5[,-1] # - el intercepto
+
+val_f5 <- validacion(fit_mass = fit5K_mass, fit_ord = fit5K_ord, hat_X = hat_X5)
+#### fitC ----
+fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
+             data = MD_K, link = "probit")
+
+hat_Xc <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09)
+hat_Xc <- model.matrix(K_04 ~ ., hat_Xc)
+hat_Xc <- hat_Xc[,-1] # - el intercepto
+
+beta_c <- fitCK$beta
+hat_yc <- hat_Xc %*% beta_c
+Qp_c <- fitCK$alpha #los puntos de corte intercepto estimados
+
+categorias_c <- sapply(hat_yc, categorizar, Qp_c)
+pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
+
+#matriz de confusión con los valores reales en las filas, predichos columnas
+CM_control <- table(pred_control$V1, pred_control$categorias)
+
+
+#######
 
 Accuracy_fit3 <- cbind(CM_cumsum(CM_fit3)/1210, c(1:5))
 Accuracy_fit5 <- cbind(CM_cumsum(CM_fit5)/1210, c(1:5))
