@@ -142,6 +142,45 @@ fit5K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
 summary(fit5K_mass)
 summary(fit5K_ord)
 
+
+# ---------------------------------------------------------------------------- #
+## Pesos muestrales ----
+# ---------------------------------------------------------------------------- #
+personas_seleccionadas <- read_csv("Datos_originales/personas_seleccionadas.csv")
+pk <- personas_seleccionadas %>% 
+  select(DIRECTORIO, FEX_C) %>% 
+  mutate(DIRECTORIO = as.character(DIRECTORIO))
+
+MD_Kpk <- MD_Kc %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
+
+#Selección automática 
+fitCKpk <- polr(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09, 
+                data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
+scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09, 
+              upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
+                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
+                FG_01+G_02+D_11+G_11+D_09)
+stepAIC(fitCKpk, scope=scope, direction = "forward")
+
+### 6 AIC 1630815.33 ----
+fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                     K_10_D + K_12_H + K_12_O + CEDAD + D2_05 + K_12_I + K_10_C + 
+                     SEXO + K_11 + D_02 + K_12_G + D_08 + K_12_C + K_10_H + K_10_E + 
+                     D2_03 + D2_01 + K_12_F + K_09_VALOR + K_10_A + TOTAL_PERSONAS + 
+                     K_10_B + D_07 + K_12_J + D_10 + K_10_F + K_12_K + K_12_A + 
+                     K_12_D + D_01 + K_12_B + K_12_L + K_12_E + K_10_G + K_12_M + 
+                     K_12_N, data = MD_Kpk, weights = FEX_C, Hess = TRUE, method = "probit")
+
+fit6K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                   K_10_D + K_12_H + K_12_O + CEDAD + D2_05 + K_12_I + K_10_C + 
+                   SEXO + K_11 + D_02 + K_12_G + D_08 + K_12_C + K_10_H + K_10_E + 
+                   D2_03 + D2_01 + K_12_F + K_09_VALOR + K_10_A + TOTAL_PERSONAS + 
+                   K_10_B + D_07 + K_12_J + D_10 + K_10_F + K_12_K + K_12_A + 
+                   K_12_D + D_01 + K_12_B + K_12_L + K_12_E + K_10_G + K_12_M + 
+                   K_12_N, data = MD_Kpk, weights = FEX_C, link = "probit")
+summary(fit6K_mass)
+summary(fit6K_ord)
+vif(fit6K_mass)
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 # Validación ----
@@ -228,7 +267,7 @@ validacion = function(fit_mass, fit_ord, hat_X){
   Accuracy <- cbind(CM_cumsum(CM)/1210, c(1:5))
   
   plot(y=Accuracy[,1], x=Accuracy[,2])
-  plot(x= c(1:5), y=Accuracy_fit3[,1], type = "o", col = "blue", pch = 16, ylim = c(0, 1), 
+  plot(x= c(1:5), y=Accuracy[,1], type = "o", col = "blue", pch = 16, ylim = c(0, 1), 
        xlab = "Distancia", ylab = "Presicion", main = "")
   
   results = list(multicol, residual, confusion = CM, Accuracy)
@@ -255,7 +294,7 @@ hat_X5 <- MD_Kc %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09,
 hat_X5 <- model.matrix(K_04 ~ ., hat_X5)
 hat_X5 <- hat_X5[,-1] # - el intercepto
 
-val_f5 <- validacion(fit_mass = fit5K_mass, fit_ord = fit5K_ord, hat_X = hat_X5)
+val_f5 <- validacion(fit_mass = fit6K_mass, fit_ord = fit6K_ord, hat_X = hat_X5)
 #### fitC ----
 fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
              data = MD_K, link = "probit")
@@ -275,32 +314,3 @@ pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
 CM_control <- table(pred_control$V1, pred_control$categorias)
 
 
-#######
-
-Accuracy_fit3 <- cbind(CM_cumsum(CM_fit3)/1210, c(1:5))
-Accuracy_fit5 <- cbind(CM_cumsum(CM_fit5)/1210, c(1:5))
-CM_control1 <- cbind("1"=rep(0, 5), CM_control)
-Accuracy_fitC <- cbind(CM_cumsum(CM_control1)/1210, c(1:5))
-
-plot(y=Accuracy_fit3[,1], x=Accuracy_fit3[,2])
-plot(y=Accuracy_fit5[,1], x=Accuracy_fit5[,2])
-plot(y=Accuracy_fitC[,1], x=Accuracy_fitC[,2])
-
-plot(x= c(1:5), y=Accuracy_fit3[,1], type = "o", col = "blue", pch = 16, ylim = c(0, 1), 
-     xlab = "Distancia", ylab = "Accuracy", main = "")
-lines(x= c(1:5), y= Accuracy_fit5[,1], type = "o", col = "red", pch = 17)
-lines(x= c(1:5), y= Accuracy_fitC[,1], type = "o", col = "green", pch = 18)
-
-# Agregar leyenda
-legend("bottomright", legend = c("fit 3", "fit 5", "Control"), 
-       col = c("blue", "red", "green"), pch = c(16, 17, 18), lty = 1)
-
-beta_c <- fitCK$beta
-hat_yc <- hat_Xc %*% beta_c
-Qp_c <- fitCK$alpha #los puntos de corte intercepto estimados
-
-categorias_c <- sapply(hat_yc, categorizar, Qp_c)
-pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
-
-#matriz de confusión con los valores reales en las filas, predichos columnas
-CM_control <- table(pred_control$V1, pred_control$categorias)
