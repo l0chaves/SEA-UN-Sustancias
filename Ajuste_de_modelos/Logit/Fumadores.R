@@ -156,44 +156,44 @@ View(acmdf)
 library(FactoMineR)
 library(factoextra)
 
-al.mca <- MCA(acmdf, graph = FALSE)
-fviz_screeplot(al.mca, addlabels = TRUE, ylim = c(0, 45)) # % de varianza explicada
+##al.mca <- MCA(acmdf, graph = FALSE)
+#fviz_screeplot(al.mca, addlabels = TRUE, ylim = c(0, 45)) # % de varianza explicada
 
 # Correlacion entre variables
-fviz_mca_var(al.mca, choice = "mca.cor", 
-             repel = TRUE, 
-             ggtheme = theme_minimal())
+#fviz_mca_var(al.mca, choice = "mca.cor", 
+#             repel = TRUE, 
+#             ggtheme = theme_minimal())
 
 
 # cos2 de cada variable
-fviz_mca_var(al.mca, col.var = "cos2",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
-             repel = TRUE, # Avoid text overlapping
-             ggtheme = theme_minimal())
+#fviz_mca_var(al.mca, col.var = "cos2",
+#             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+#             repel = TRUE, # Avoid text overlapping
+#             ggtheme = theme_minimal())
 
 
 
 # grafico interesante
-fviz_mca_ind(al.mca, 
-             label = "none", # hide individual labels
-             habillage = "CESTRATO", # color by groups 
-             palette = c("#00AFBB", "#E7B800", "blue","red","green","purple"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             ggtheme = theme_minimal()) 
+#fviz_mca_ind(al.mca, 
+#             label = "none", # hide individual labels
+#             habillage = "CESTRATO", # color by groups 
+#             palette = c("#00AFBB", "#E7B800", "blue","red","green","purple"),
+#             addEllipses = TRUE, ellipse.type = "confidence",
+#             ggtheme = theme_minimal()) 
 
 
-fviz_ellipses(al.mca, c("CSEXO", "CTIPO"),
-              geom = "point")
+#fviz_ellipses(al.mca, c("CSEXO", "CTIPO"),
+#              geom = "point")
 
 
-fviz_mca_biplot(al.mca, 
-                repel = TRUE, # Avoid text overlapping (slow if many point)
-                ggtheme = theme_minimal())
+#fviz_mca_biplot(al.mca, 
+#                repel = TRUE, # Avoid text overlapping (slow if many point)
+#                ggtheme = theme_minimal())
 
 # ACM con variables e individuos suplementarios
 
-al.mca2 <- MCA(acmdf, ind.sup = 30000:42441, 
-               quali.sup = 1:2,  graph=FALSE)
+#al.mca2 <- MCA(acmdf, ind.sup = 30000:42441, 
+#               quali.sup = 1:2,  graph=FALSE)
 
 
 #### grafico 1
@@ -236,10 +236,15 @@ OR
 
 smoker <- read_csv("Drogas/Datos originales/e_capitulos.csv", col_names = TRUE)
 smoker <- smoker %>%
-  select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
-  mutate_all(as.character) %>%
-  filter(E_01 == 1)
+  dplyr::select(-`SECUENCIA_ENCUESTA`, -`SECUENCIA_P`, -`ORDEN`) %>%
+  mutate_all(as.character) #%>%
+  #filter(E_01 == 1)
 
+table(smoker$E_04) #80 personas no respondieron
+
+smoker <- sqldf("select *
+                 from smoker
+                 where E_04 in (1,2)")
 
 fdf<-NULL
 fdf <- sqldf("select smoker.*, encuestas.Depmuni, encuestas.TIPO, encuestas.SERVICIO,
@@ -251,17 +256,18 @@ fdf <- sqldf("select smoker.*, encuestas.Depmuni, encuestas.TIPO, encuestas.SERV
 fdf <- sqldf("select fdf.*, personas_seleccionadas.SEXO, personas_seleccionadas.EDAD
              from fdf left join personas_seleccionadas on (fdf.DIRECTORIO = 
                                                           personas_seleccionadas.DIRECTORIO)")
+head(fdf)
 View(fdf)
 
 
 
 fdf2<-NULL
-fdf2<-fdf[,c(2,10,seq(14,20,1))]
+fdf2<-fdf[,c(2,4,10,seq(14,20,1))]
 str(fdf2)
 
 
 # Categorizando la variable SEXO
-fdf2<- sqldf("select SEXO, EDAD, ESTRATO, TIPO, SERVICIO, TOTAL_PERSONAS,Depmuni, E_02, E_10,
+fdf2<- sqldf("select SEXO, EDAD, ESTRATO, TIPO, SERVICIO, TOTAL_PERSONAS,Depmuni, E_02, E_04, E_10,
              case when SEXO=1 then 'M'
                   else 'F'
              end as CSEXO
@@ -269,10 +275,12 @@ fdf2<- sqldf("select SEXO, EDAD, ESTRATO, TIPO, SERVICIO, TOTAL_PERSONAS,Depmuni
 
 # Categorizando la variable EDAD
 fdf2<- sqldf("select *,
-             case when EDAD <= 18 then 'Adolescente'
-                  when EDAD <= 26 then 'Joven'
-                  when EDAD <= 59 then 'Adulto'
-                  else 'Persona Mayor'
+             case when EDAD <= 17 then 'Teenagers'
+                  when EDAD <= 24 then 'Young'
+                  when EDAD <= 34 then 'Young Adult'
+                  when EDAD <= 44 then 'Adult'
+                  when EDAD <= 63 then 'Elderly'
+                  else 'Third Age'
              end as CEDAD
              from fdf2")
 
@@ -321,46 +329,110 @@ fdf2 <- within(fdf2,{
   Tipo <- ifelse(Depmuni=="25001","Otro",Tipo)
 })
 
+head(fdf2)
 View(fdf2)
 
-acmfdf <- fdf2[,c(seq(10,16,1))]
+sdf <- fdf2[,c(seq(8,16,1))]
 #acmdf <- lapply(acsdf, as.factor) #solo para la libreria FactoClass
-str(acmdf)
-View(acmdf)
+str(sdf)
+head(sdf)
+
+sdf$E_10 <- ifelse(sdf$E_10==2,0,1)
+sdf$E_04 <- ifelse(sdf$E_04==2,0,1)
+
+head(sdf)
+
+## Modelo para fumadores
+
+fit_0<-glm(E_04~CEDAD+CESTRATO+CSEXO+CE_10+E_02+CTIPO+ CE_10*CEDAD+CE_10*CESTRATO, family = binomial(), data = sdf)
+
+# Selección hacia adelante
+modelo_forward_s <- stepCriterion(fit_0, criterion = "bic", direction = "forward")
+
+# Seleccion hacia atras
+modelo_backward_s <- stepCriterion(fit_0, criterion = "bic",direction = "backward")
+
+fit_1<-glm(E_04~CEDAD+CSEXO+CE_10+CE_10*CEDAD, family = binomial(), data = sdf)
+AIC(fit_0,fit_1)
+BIC(fit_0,fit_1)
+adjR2(fit_0,fit_1)
+
+fit_2<-glm(E_04~1, family = binomial(), data = sdf)
+anova2(fit_2,fit_1)
+
+summary(fit_1)
+envelope(fit_1)
 
 
-############## ACM con la libreria FactoMineR #############
-library(FactoMineR)
-library(factoextra)
+##############################################################################
+####### Matriz de confusión Fumadores ##########
 
-smoker.mca <- MCA(acmfdf, graph = FALSE)
-fviz_screeplot(smoker.mca, addlabels = TRUE, ylim = c(0, 45)) # % de varianza explicada
+#Fumadores
+hist(predict.glm(fit_1, type = "response"))
 
-# Correlacion entre variables
-fviz_mca_var(smoker.mca, choice = "mca.cor", 
-             repel = TRUE, 
-             ggtheme = theme_minimal())
+prob_smoker<-predict.glm(fit_1, type = "response")
+predic_smoker<-ifelse(prob_smoker>0.1,1,0)
 
+## Volviendo las columnas factores
+actual_levels_F <- factor(sdf$E_04, levels = c(0, 1)) 
+predicho_levels_F <- factor(predic_smoker, levels = c(0, 1))
 
-# cos2 de cada variable
-fviz_mca_var(smoker.mca, col.var = "cos2",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
-             repel = TRUE, # Avoid text overlapping
-             ggtheme = theme_minimal())
+tabla<-table(actual_levels_F, Predicho=predicho_levels_F)
+tabla
+tpr<-tabla[2,2]/(sum(tabla[2,]))
+tpr
 
-
-
-# grafico interesante
-fviz_mca_ind(smoker.mca, 
-             label = "none", # hide individual labels
-             habillage = "CESTRATO", # color by groups 
-             palette = c("#00AFBB", "#E7B800", "blue","red","green","purple"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             ggtheme = theme_minimal()) 
+tnr<-tabla[1,1]/(sum(tabla[1,]))
+tnr
 
 
-fviz_ellipses(smoker.mca, c("CSEXO", "CTIPO"),
-              geom = "point")
+#calculando alpha
+
+alpha <- seq(0,1,0.02)
+tpr_tot_smoker<-NULL
+tnr_tot_smoker<-NULL
+for (i in alpha) {
+  predic_smoker_i<-NULL
+  print(i)
+  alpha_i<-alpha[i]
+  predic_smoker_i<-ifelse(prob_smoker>i,1,0)
+  predicho_levels_F_i <- factor(predic_smoker_i, levels = c(0, 1))
+  tabla_i<-table(Actual=actual_levels_F, Predicho=predicho_levels_F_i)
+  tpr_i<-tabla_i[2,2]/(sum(tabla_i[2,]))
+  tpr_tot_smoker<-c(tpr_tot,tpr_i)
+  tnr_i<-tabla_i[1,1]/(sum(tabla_i[1,]))
+  tnr_tot_smoker<-c(tnr_tot,tnr_i)
+}
+
+tabla_comp_smoker<-NULL
+tabla_comp_smoker<-cbind(tabla_comp_smoker,tpr_tot_smoker)
+tabla_comp_smoker<-cbind(tabla_comp_smoker,tnr_tot_smoker)
+tabla_comp_smoker<-cbind(alpha,tabla_comp_smoker)
+
+tabla_comp_smoker
+
+
+#Gráfico
+
+# Crear el dataframe con los datos
+data_fumadores <- data.frame(
+  alpha = tabla_comp_smoker[seq(1,51,1),1],
+  tpr_tot = tabla_comp_smoker[seq(1,51,1),2],
+  tnr_tot = tabla_comp_smoker[seq(1,51,1),3]
+)
+
+# Calcular la tasa de falsos positivos (FPR)
+data_fumadores$fpr_tot <- 1 - data_fumadores$tnr_tot
+
+# Graficar la curva ROC
+plot(data_fumadores$fpr_tot, data_fumadores$tpr_tot, type = "l", col = "blue", 
+     xlab = "FPR (1 - TNR)", ylab = "TPR (Sensibilidad)", 
+     main = "Curva ROC Tabaco",
+     xlim = c(0,1), ylim = c(0,1))
+grid()
+
+abline(a = 0, b = 1, col = "red", lty = 2)
+
 
 
 #### grafico 1
@@ -540,6 +612,88 @@ tabla_con_margenes <- addmargins(tabla_contingencia)
 xtable(summary(fit))
 
 envelope(fit)
+
+
+##############################################################################
+####### Matriz de confusión ##########
+
+##Alcohol
+summary(fit)
+hist(predict.glm(fit, type = "response"))
+
+prob_alc<-predict.glm(fit, type = "response")
+predic_alc<-ifelse(prob_alc>0.2,1,0)
+
+## Volviendo las columnas factores
+actual_levels <- factor(df2$F_06, levels = c(0, 1)) 
+predicho_levels <- factor(predic_alc, levels = c(0, 1))
+
+tabla<-table(Actual=actual_levels, Predicho=predicho_levels)
+tabla
+tpr<-tabla[2,2]/(sum(tabla[2,]))
+tpr
+
+tnr<-tabla[1,1]/(sum(tabla[1,]))
+tnr
+
+#calculando alpha
+
+alpha <- seq(0,1,0.02)
+tpr_tot<-NULL
+tnr_tot<-NULL
+for (i in alpha) {
+  predic_smoker_i<-NULL
+  alpha_i<-alpha[i]
+  predic_smoker_i<-ifelse(prob_alc>i,1,0)
+  fpredicho_levels <- factor(predic_smoker_i, levels = c(0, 1))
+  tabla_i<-table(Actual=actual_levels, Predicho=fpredicho_levels)
+  tpr_i<-tabla_i[2,2]/(sum(tabla_i[2,]))
+  tpr_tot<-c(tpr_tot,tpr_i)
+  tnr_i<-tabla_i[1,1]/(sum(tabla_i[1,]))
+  tnr_tot<-c(tnr_tot,tnr_i)
+}
+
+tabla_comp<-NULL
+tabla_comp<-cbind(tabla_comp,tpr_tot)
+tabla_comp<-cbind(tabla_comp,tnr_tot)
+tabla_comp<-cbind(alpha,tabla_comp)
+
+tabla_comp
+plot(tabla_comp[,1])
+
+
+#Gráfico
+
+# Crear el dataframe con los datos
+data <- data.frame(
+  alpha = tabla_comp[,1],
+  tpr_tot = tabla_comp[,2],
+  tnr_tot = tabla_comp[,3]
+)
+
+# Calcular la tasa de falsos positivos (FPR)
+data$fpr_tot <- 1 - data$tnr_tot
+
+# Graficar la curva ROC
+plot(data$fpr_tot, data$tpr_tot, type = "l", col = "blue", 
+     xlab = "FPR (1 - TNR)", ylab = "TPR (Sensibilidad)", 
+     main = "Curva ROC Alcohol",
+     xlim = c(0,1), ylim = c(0,1))
+grid()
+
+abline(a = 0, b = 1, col = "red", lty = 2)
+
+
+head(data)
+tail(data_fumadores)
+
+
+
+
+par(mfrow=c(1,2))
+
+
+
 
 
 
