@@ -51,25 +51,33 @@ MD_K <- MD_K[complete.cases(MD_K),]
 fit0K <- polr(factor(K_04) ~ 1, data = MD_K, Hess = TRUE, method = "probit")
 summary(fit0K) #AIC: 3800.169
 
-fitCK <- polr(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09, data = MD_K, Hess = TRUE, method = "probit")
-summary(fitCK) #AIC: 3776.28 
+fitCK <- polr(factor(K_04) ~ FG_01+G_02+D_11+D_11_P+G_11+D_09,
+              data = MD_K, Hess = TRUE, method = "probit")
+summary(fitCK) #AIC: 3777.591
 
 # ---------------------------------------------------------------------------- #
 
 ## selección ----
-### 1 AIC: 3541.156 ----
-scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
+### 1 AIC: 3330.779  ----
+scope <- list(lower=~FG_01+G_02+D_11+D_11_P+G_11+D_09,
               upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
                 D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+EDAD+SEXO+
-                FG_01+G_02+D_11+G_11+D_09)
+                FG_01+G_02+D_11+D_11_P+G_11+D_09)
 stepAIC(fitCK, scope=scope, direction = "forward")
 
-fit1K <- polr(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                K_10_C + SEXO + K_10_E + D2_05 + K_11 + EDAD + K_10_D + D_01 + 
-                D_07 + K_10_I, data = MD_K, Hess = TRUE, method = "probit")
-summary(fit1K) #AIC: 3513.382 
+fit1K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + D_11_P + 
+                G_11 + D_09 + K_12_O + K_10_C + K_12_I + SEXO + D_02 + K_10_D + 
+                K_12_H + K_11 + K_10_E + TOTAL_PERSONAS + K_12_C + 
+                EDAD + K_10_I + D_01, data = MD_K, Hess = TRUE, method = "probit"); vif(fit1K_mass)
 
-PseudoR2(fit1K)
+fit1K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + D_11_P + 
+                    G_11 + D_09 + K_12_O + K_10_C + K_12_I + SEXO + D_02 + K_10_D + 
+                    K_12_H + K_11 + D2_05 + K_10_E + TOTAL_PERSONAS + K_12_C + 
+                    EDAD + K_10_I + D_01, data = MD_K, link = "probit")
+
+summary(fit1K_mass)
+summary(fit1K_ord)
+PseudoR2(fit1K_mass)
 
 ### 2 AIC: 3540.153 ----
 fit2K <- polr(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
@@ -150,8 +158,23 @@ personas_seleccionadas <- read_csv("Datos_originales/personas_seleccionadas.csv"
 pk <- personas_seleccionadas %>% 
   select(DIRECTORIO, FEX_C) %>% 
   mutate(DIRECTORIO = as.character(DIRECTORIO))
+rm(personas_seleccionadas, pk)
 
 MD_Kpk <- MD_Kc %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
+
+### 6 AIC: 1704123.80   ----
+fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                     K_12_O + K_10_C + CEDAD + K_12_I + K_10_D + SEXO + 
+                     K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
+                     D_01 + K_12_K, data = MD_Kpk, Hess = TRUE, method = "probit",
+                     weights = FEX_C)
+
+fit6K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                   K_12_O + K_10_C + CEDAD + K_12_I + K_10_D + SEXO + 
+                   K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
+                   D_01 + K_12_K, data = MD_Kpk, link = "probit", weights = FEX_C)
+summary(fit6K_mass)
+summary(fit6K_ord)
 
 #Selección automática 
 fitCKpk <- polr(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09, 
@@ -162,8 +185,8 @@ scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
                 FG_01+G_02+D_11+G_11+D_09)
 stepAIC(fitCKpk, scope=scope, direction = "forward")
 
-### 6 AIC 1630815.33 ----
-fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+### 7 AIC: 1630815.33 ----
+fit7K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
                      K_10_D + K_12_H + K_12_O + CEDAD + D2_05 + K_12_I + K_10_C + 
                      SEXO + K_11 + D_02 + K_12_G + D_08 + K_12_C + K_10_H + K_10_E + 
                      D2_03 + D2_01 + K_12_F + K_09_VALOR + K_10_A + TOTAL_PERSONAS + 
@@ -171,16 +194,35 @@ fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 +
                      K_12_D + D_01 + K_12_B + K_12_L + K_12_E + K_10_G + K_12_M + 
                      K_12_N, data = MD_Kpk, weights = FEX_C, Hess = TRUE, method = "probit")
 
-fit6K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+fit7K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
                    K_10_D + K_12_H + K_12_O + CEDAD + D2_05 + K_12_I + K_10_C + 
                    SEXO + K_11 + D_02 + K_12_G + D_08 + K_12_C + K_10_H + K_10_E + 
                    D2_03 + D2_01 + K_12_F + K_09_VALOR + K_10_A + TOTAL_PERSONAS + 
                    K_10_B + D_07 + K_12_J + D_10 + K_10_F + K_12_K + K_12_A + 
                    K_12_D + D_01 + K_12_B + K_12_L + K_12_E + K_10_G + K_12_M + 
                    K_12_N, data = MD_Kpk, weights = FEX_C, link = "probit")
-summary(fit6K_mass)
-summary(fit6K_ord)
-vif(fit6K_mass)
+summary(fit7K_mass)
+summary(fit7K_ord)
+vif(fit7K_mass)
+
+### 8 AIC:  ----
+
+fit8K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                     K_10_D + K_12_H + K_12_O + CEDAD + D2_05 + K_12_I + K_10_C + 
+                     SEXO + K_11 + D_02 + K_12_G + D_08 + K_12_C + K_10_H + K_10_E + 
+                     D2_03 + D2_01 + K_12_F + K_09_VALOR + K_10_A + TOTAL_PERSONAS + 
+                     K_10_B + D_07, 
+                     data = MD_Kpk, weights = FEX_C, Hess = TRUE, method = "probit")
+
+fit7K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
+                   K_10_D + K_12_H + K_12_O + CEDAD + D2_05 + K_12_I + K_10_C + 
+                   SEXO + K_11 + D_02 + K_12_G + D_08 + K_12_C + K_10_H + K_10_E + 
+                   D2_03 + D2_01 + K_12_F + K_09_VALOR + K_10_A + TOTAL_PERSONAS + 
+                   K_10_B + D_07 + K_12_J + D_10 + K_10_F + K_12_K + K_12_A + 
+                   K_12_D + D_01 + K_12_B + K_12_L + K_12_E,
+                   data = MD_Kpk, weights = FEX_C, link = "probit")
+summary(fit8K_mass)
+summary(fit8K_ord)
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 # Validación ----
@@ -227,7 +269,7 @@ CM_cumsum <- function(conf_matrix){
 
 validacion = function(fit_mass, fit_ord, hat_X){
   ## Multicolinealidad ----
-  multicol = vif(fit_mass)
+  multicol = car::vif(fit_mass)
   print(multicol)
   
   ## residuales ----
