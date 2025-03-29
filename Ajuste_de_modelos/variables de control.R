@@ -35,7 +35,7 @@ row_median <- function(row) {
   return(median(as.numeric(row)))
 }
 
-percepcion$D_11_P <- ifelse(percepcion$D_11 == 0,9,
+percepcion$D_11_P <- ifelse(percepcion$D_11 == 0, NA,
                             apply(percepcion[,-c(15, 16)], 1, row_median))
 # ------------------------------------------------------------------------------ #
 #edad a la que consumió por primer vez alguna droga incluyendo alcohol y tabaco
