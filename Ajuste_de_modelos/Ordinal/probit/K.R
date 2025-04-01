@@ -137,12 +137,12 @@ summary(fit4K_ord)
 fit5K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                      K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                     K_12_K, data = MD_Kc, Hess = TRUE, method = "probit")
+                     K_12_K, data = MD_Kpk2, Hess = TRUE, method = "probit")
 
 fit5K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                    D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                    K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                   K_12_K, data = MD_Kc, link = "probit")
+                   K_12_K, data = MD_Kpk2, link = "probit")
 
 summary(fit5K_mass); vif(fit5K_mass)
 summary(fit5K_ord)
@@ -164,13 +164,13 @@ rm(personas_seleccionadas, pk)
 fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                      K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                     K_12_K, data = MD_Kpk, Hess = TRUE, method = "probit",
+                     K_12_K, data = MD_Kpk2, Hess = TRUE, method = "probit",
                      weights = FEX_C)
 
 fit6K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                    D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                    K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                   K_12_K,, data = MD_Kpk, link = "probit", weights = FEX_C)
+                   K_12_K,, data = MD_Kpk2, link = "probit", weights = FEX_C)
 
 summary(fit6K_mass); vif(fit6K_mass)
 summary(fit6K_ord)
@@ -348,7 +348,8 @@ hat_X5 <- MD_Kc %>% dplyr::select(K_04, FG_01 ,G_02 ,D_11_P ,G_11 ,
 hat_X5 <- model.matrix(K_04 ~ ., hat_X5)
 hat_X5 <- hat_X5[,-1] # - el intercepto
 
-val_f5 <- validacion(fit_mass = fit6K_mass, fit_ord = fit6K_ord, hat_X = hat_X5)
+val_f5 <- validacion(fit_mass = fit5K_mass, fit_ord = fit5K_ord, hat_X = hat_X5)
+val_f6 <- validacion(fit_mass = fit6K_mass, fit_ord = fit6K_ord, hat_X = hat_X5)
 
 #### fit8 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
