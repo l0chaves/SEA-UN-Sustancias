@@ -11,7 +11,8 @@ library("PResiduals")
 library("ggplot2")
 library("sure")
 library("sqldf")
-
+library("sandwich")
+library("lmtest")
 
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
@@ -44,6 +45,7 @@ MD_K <- C_k %>%
 summary(MD_K) #Los que contestaron 9 en la pregunta original quedan como NA's
 MD_K <- MD_K[complete.cases(MD_K),]
 
+
 # ---------------------------------------------------------------------------- #
 # Ajuste de modelos ----
 # ---------------------------------------------------------------------------- #
@@ -55,44 +57,6 @@ fitCK <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09,
               data = MD_K, Hess = TRUE, method = "probit")
 summary(fitCK) #AIC:3231.601
 
-# ---------------------------------------------------------------------------- #
-
-## selección
-scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09,
-              upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
-                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+EDAD+SEXO+
-                FG_01+G_02+D_11_P+G_11+D_09)
-stepAIC(fitCK, scope=scope, direction = "forward")
-
-### 1 AIC: 2861.911  ----
-fit1K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + EDAD + 
-                     K_10_E + D2_05 + K_11 + K_10_D + D_01 + K_12_C + K_10_I + 
-                     TOTAL_PERSONAS, data = MD_K, Hess = TRUE, method = "probit")
-
-fit1K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + EDAD + 
-                   K_10_E + D2_05 + K_11 + K_10_D + D_01 + K_12_C + K_10_I + 
-                   TOTAL_PERSONAS, data = MD_K, link = "probit")
-
-summary(fit1K_ord)
-summary(fit1K_mass); vif(fit1K_mass)
-PseudoR2(fit1K_mass)
-
-### 2 AIC: 2884.23  ----
-fit2K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + EDAD + 
-                     K_10_E + K_11 + K_10_D + D_01 + K_12_C + K_10_I + 
-                     TOTAL_PERSONAS, data = MD_K, Hess = TRUE, method = "probit")
-
-fit2K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + EDAD + 
-                   K_10_E + K_11 + K_10_D + D_01 + K_12_C + K_10_I + 
-                   TOTAL_PERSONAS, data = MD_K, link = "probit")
-
-summary(fit2K_ord)
-summary(fit2K_mass); vif(fit2K_mass)
-PseudoR2(fit2K_mass)
 
 # ---------------------------------------------------------------------------- #
 ## Categorizando Edad ----
@@ -109,8 +73,18 @@ MD_Kc<- sqldf("select *,
              end as CEDAD
              from MD_K")
 
+# Correcciones por estandariza
+MD_K2 <- MD_Kc %>% 
+  mutate(K_09_VALOR = scale(K_09_VALOR)) %>%
+  mutate(D_11_P = scale(D_11_P)) %>%
+  mutate(G_11 = scale(G_11)) %>%
+  mutate(EDAD = scale(EDAD)) %>%
+  mutate(TOTAL_PERSONAS = scale(TOTAL_PERSONAS)) %>%
+  mutate(D_05 = scale(D_05))
+
+### Seleccion ----
 #Se hace selección automática cambiando edad por su versión categórica
-fitCKc <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09, data = MD_Kc, Hess = TRUE, method = "probit")
+fitCKc <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09, data = MD_K2, Hess = TRUE, method = "probit")
 scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09, 
               upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
                 D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
@@ -123,26 +97,27 @@ stepAIC(fitCKc, scope=scope, direction = "forward")
 fit4K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + SEXO + 
                      K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                     K_12_K, data = MD_Kc, Hess = TRUE, method = "probit")
+                     K_12_K, data = MD_K2, Hess = TRUE, method = "probit")
 
 fit4K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                    D_09 + K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + SEXO + 
                    K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                   K_12_K, data = MD_Kc, link = "probit")
+                   K_12_K, data = MD_K2, link = "probit")
 
 summary(fit4K_mass); vif(fit4K_mass)
 summary(fit4K_ord)
 
 ### 5 AIC: 3333.79  ----
+# Mejor modelo seleccionado sin usar pesos, estimado sin pesos
 fit5K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                      K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                     K_12_K, data = MD_Kpk2, Hess = TRUE, method = "probit")
+                     K_12_K, data = MD_K2, Hess = TRUE, method = "probit")
 
 fit5K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                    D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                    K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                   K_12_K, data = MD_Kpk2, link = "probit")
+                   K_12_K, data = MD_K2, link = "probit")
 
 summary(fit5K_mass); vif(fit5K_mass)
 summary(fit5K_ord)
@@ -157,64 +132,65 @@ pk <- personas_seleccionadas %>%
   dplyr::select(DIRECTORIO, FEX_C) %>% 
   mutate(DIRECTORIO = as.character(DIRECTORIO))
 
-MD_Kpk <- MD_Kc %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
+MD_Kpk <- MD_K2 %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
 rm(personas_seleccionadas, pk)
 
 ### 6 AIC: 1477814.78 ----
+# Mejor modelo seleccionado sin usar pesos, estimado usando pesos
 fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                      K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                     K_12_K, data = MD_Kpk2, Hess = TRUE, method = "probit",
+                     K_12_K, data = MD_Kpk, Hess = TRUE, method = "probit",
                      weights = FEX_C)
 
 fit6K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                    D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
                    K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                   K_12_K,, data = MD_Kpk2, link = "probit", weights = FEX_C)
+                   K_12_K,, data = MD_Kpk, link = "probit", weights = FEX_C)
 
 summary(fit6K_mass); vif(fit6K_mass)
 summary(fit6K_ord)
 
-### Correcciones ----
-MD_Kpk2 <- MD_Kpk %>% 
-  mutate(K_09_VALOR = scale(K_09_VALOR)) %>%
-  mutate(D_11_P = scale(D_11_P)) %>%
-  mutate(G_11 = scale(G_11)) %>%
-  mutate(EDAD = scale(EDAD)) %>%
-  mutate(TOTAL_PERSONAS = scale(TOTAL_PERSONAS)) %>%
-  mutate(D_05 = scale(D_05)) %>%
-  mutate(FEX_C = FEX_C)
 
-### 7 AIC: 1477814.78  ----
-fit7K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
-                     K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                     K_12_K, data = MD_Kpk2, Hess = TRUE, method = "probit", weights = FEX_C)
-
-fit7K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
-                   K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
-                   K_12_K,, data = MD_Kpk2, link = "probit", weights = FEX_C)
-
-summary(fit7K_mass); vif(fit7K_mass)
-summary(fit7K_ord)  
-
+### Seleccion ----
 fitCKpk <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09, 
-                data = MD_Kpk2, Hess = TRUE, method = "probit", weights = FEX_C)
+                data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
 scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09, 
               upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
                 D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
                 FG_01+G_02+D_11_P+G_11+D_09)
 stepAIC(fitCKpk, scope=scope, direction = "forward")
 
+### 7 AIC: 1412513.42  ----
+fit7K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + K_12_G + K_12_H + K_10_C + CEDAD + D2_05 + K_12_O + 
+                     K_10_D + SEXO + K_11 + D_02 + K_12_I + D2_03 + D_08 + K_10_E + 
+                     K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                     TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                     D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                     K_12_N + K_12_J, 
+                     data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
+
+fit7K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + K_12_G + K_12_H + K_10_C + CEDAD + D2_05 + K_12_O + 
+                   K_10_D + SEXO + K_11 + D_02 + K_12_I + D2_03 + D_08 + K_10_E + 
+                   K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                   TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                   D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                   K_12_N + K_12_J, data = MD_Kpk, link = "probit", weights = FEX_C)
+
+summary(fit7K_mass); vif(fit7K_mass)
+
 ### 8 AIC: 1457926.79  ----
+# Mejor modelo seleccionado usando pesos, estimado usando pesos
+
 fit8K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
                      K_10_D + SEXO + K_11 + K_12_I + D2_03 + D_08 + K_10_E + 
                      K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
                      TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
                      D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
-                     K_12_N + K_12_J, data = MD_Kpk2, Hess = TRUE, method = "probit", weights = FEX_C)
+                     K_12_N + K_12_J, data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
 
 fit8K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                    D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
@@ -222,19 +198,21 @@ fit8K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 +
                    K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
                    TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
                    D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
-                   K_12_N + K_12_J, data = MD_Kpk2, link = "probit", weights = FEX_C)
+                   K_12_N + K_12_J, data = MD_Kpk, link = "probit", weights = FEX_C)
 
 summary(fit8K_mass); vif(fit8K_mass)
 summary(fit8K_ord)
 
 ### 9 AIC:   ----
+# Mejor modelo seleccionado usando pesos, estimado sin pesos
+
 fit9K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
                      K_10_D + SEXO + K_11 + K_12_I + D2_03 + D_08 + K_10_E + 
                      K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
                      TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
                      D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
-                     K_12_N + K_12_J, data = MD_Kpk2, Hess = TRUE, method = "probit")
+                     K_12_N + K_12_J, data = MD_Kpk, Hess = TRUE, method = "probit")
 
 fit9K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                    D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
@@ -242,7 +220,7 @@ fit9K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 +
                    K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
                    TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
                    D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
-                   K_12_N + K_12_J, data = MD_Kpk2, link = "probit")
+                   K_12_N + K_12_J, data = MD_Kpk, link = "probit")
 
 summary(fit9K_mass); vif(fit9K_mass)
 summary(fit9K_ord)
@@ -339,9 +317,9 @@ validacion = function(fit_mass, fit_ord, hat_X){
 }
 
 # ---------------------------------------------------------------------------- #
-#### fit5 ----
+#### fit5 - fit6 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
-hat_X5 <- MD_Kc %>% dplyr::select(K_04, FG_01 ,G_02 ,D_11_P ,G_11 ,
+hat_X5 <- MD_Kpk %>% dplyr::select(K_04, FG_01 ,G_02 ,D_11_P ,G_11 ,
                                     D_09 ,K_12_O ,K_10_C ,CEDAD ,K_12_I ,SEXO ,
                                     K_11 ,K_10_D ,K_12_H ,K_10_E ,K_12_C ,K_10_I ,TOTAL_PERSONAS ,
                                     K_12_K)
@@ -351,7 +329,7 @@ hat_X5 <- hat_X5[,-1] # - el intercepto
 val_f5 <- validacion(fit_mass = fit5K_mass, fit_ord = fit5K_ord, hat_X = hat_X5)
 val_f6 <- validacion(fit_mass = fit6K_mass, fit_ord = fit6K_ord, hat_X = hat_X5)
 
-#### fit8 ----
+#### fit8 - fit9 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
 hat_X8 <- MD_Kpk %>% dplyr::select(K_04, FG_01, G_02, D_11_P, G_11, 
                                      D_09, K_12_G, K_12_H, K_10_C, CEDAD, K_12_O, 
@@ -364,8 +342,6 @@ hat_X8 <- model.matrix(K_04 ~ ., hat_X8)
 hat_X8 <- hat_X8[,-1] # - el intercepto
 
 val_f8 <- validacion(fit_mass = fit8K_mass, fit_ord = fit8K_ord, hat_X = hat_X8)
-
-#### fit9 ----
 val_f9 <- validacion(fit_mass = fit9K_mass, fit_ord = fit9K_ord, hat_X = hat_X8)
 
 #### fitC ----
@@ -379,3 +355,44 @@ hat_Xc <- model.matrix(K_04 ~ ., hat_Xc)
 hat_Xc <- hat_Xc[,-1] # - el intercepto
 
 val_fC <- validacion(fit_mass = fitCK_mass, fit_ord = fitCK_ord, hat_X = hat_Xc)
+
+
+#  ----
+# Making Sandwiches with Bread and Meat
+prueba1_mass <- sandwich(fit6K_mass)
+prueba1_ord  <- sandwich(fit6K_ord)
+#No son iguales. 
+
+# Clustered Covariance Matrix Estimation
+prueba2_mass  <- vcovCL(fit6K_mass, type = "HC0", sandwich = TRUE)
+prueba2_ord   <- vcovCL(fit6K_ord, type = "HC0", sandwich = TRUE) 
+#NO son iguales. 
+
+#Heteroscedasticity and Autocorrelation Consistent
+prueba3_mass  <- vcovHAC(fit6K_mass, sandwich = TRUE)
+prueba3_ord   <- vcovHAC(fit6K_ord, sandwich = TRUE) 
+#NO son iguales
+
+# Heteroskedasticity-robust
+prueba4_mass <- vcovHC(fit6K_mass, type = "HC0", sandwich = TRUE)
+prueba4_ord  <- vcovHC(fit6K_ord, type = "HC0", sandwich = TRUE)
+# NO corre
+
+#Pero CL y HAC generan los mismos resultados. 
+all.equal(prueba2_mass, prueba3_mass)
+all.equal(prueba2_ord, prueba3_ord)
+
+all.equal(prueba1_mass, prueba3_mass)
+all.equal(prueba1_ord, prueba3_ord)
+
+## p valores
+sqrt(diag(prueba1_mass))
+coeftest(fit6K_mass, vcov = prueba1_mass)
+sqrt(diag(prueba1_ord))
+coeftest(fit6K_ord, vcov = prueba1_ord)
+
+
+sqrt(diag(prueba2_mass))
+coeftest(fit6K_mass, vcov = prueba2_mass)
+sqrt(diag(prueba2_ord))
+coeftest(fit6K_ord, vcov = prueba2_ord)
