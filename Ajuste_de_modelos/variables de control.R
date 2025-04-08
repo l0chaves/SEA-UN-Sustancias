@@ -23,12 +23,20 @@ familia <- entorno %>%
 percepcion <- d %>%
    dplyr::select(D_11_A, D_11_B, D_11_C, D_11_D, D_11_E, D_11_F, D_11_G, D_11_H, D_11_I,
          D_11_J, D_11_K, D_11_L, D_11_M, D_11_N, DIRECTORIO)
-  
+
+# Se verifica si la persona tiene o no conocimiento del riesgo sobre todas las sustancias
+percepcion$D_11 <- as.numeric(!apply(percepcion == "5", 1, any))
+
+# Se cuentan con los registros de las personas que si tienen una percepción del riesgo para el puntaje
+percepcion2 <- percepcion[!apply(percepcion == "5", 1, any), ]
+
 # al estar en escala likert se calcula la mediana por cada individuo
 row_median <- function(row) {
   return(median(as.numeric(row)))
 }
-percepcion$D_11 <- apply(percepcion[,-15], 1, row_median)
+
+percepcion$D_11_P <- ifelse(percepcion$D_11 == 0, NA,
+                            apply(percepcion[,-c(15, 16)], 1, row_median))
 # ------------------------------------------------------------------------------ #
 #edad a la que consumió por primer vez alguna droga incluyendo alcohol y tabaco
 edad <- C_g %>%
@@ -52,8 +60,8 @@ control <- familia %>%
   left_join(percepcion, by=c("DIRECTORIO"="DIRECTORIO")) %>%
   left_join(edad, by=c("DIRECTORIO"="DIRECTORIO")) %>%
   left_join(d, by=c("DIRECTORIO"="DIRECTORIO")) %>%
-  dplyr::select(FG_01, G_02, D_11, G_11, D_09, DIRECTORIO) %>%
-  mutate_at(c(1, 2, 5), as.factor)
+  dplyr::select(FG_01, G_02, D_11, D_11_P, G_11, D_09, DIRECTORIO) %>%
+  mutate_at(c(1, 2, 3, 6), as.factor)
 
 summary(control)
 rm(familia, percepcion, edad)

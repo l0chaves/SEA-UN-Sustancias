@@ -1,7 +1,5 @@
 load("Limpieza_tablas/tablas.RData")
-
 source('Ajuste_de_modelos/variables de control.R')
-
 rm(list = setdiff(ls(), c("C_k", "control", "d", "d2", "encuestas")))
 
 library("MASS")
@@ -13,7 +11,8 @@ library("PResiduals")
 library("ggplot2")
 library("sure")
 library("sqldf")
-
+library("sandwich")
+library("lmtest")
 
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
@@ -46,6 +45,7 @@ MD_K <- C_k %>%
 summary(MD_K) #Los que contestaron 9 en la pregunta original quedan como NA's
 MD_K <- MD_K[complete.cases(MD_K),]
 
+
 # ---------------------------------------------------------------------------- #
 # Ajuste de modelos ----
 # ---------------------------------------------------------------------------- #
@@ -53,48 +53,11 @@ MD_K <- MD_K[complete.cases(MD_K),]
 fit0K <- polr(factor(K_04) ~ 1, data = MD_K, Hess = TRUE, method = "probit")
 summary(fit0K) #AIC: 3800.169
 
-fitCK <- polr(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09, data = MD_K, Hess = TRUE, method = "probit")
-summary(fitCK) #AIC: 3776.28 
-
-# ---------------------------------------------------------------------------- #
-
-## selección ----
-### 1 AIC: 3541.156 ----
-scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09,
-              upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
-                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+EDAD+SEXO+
-                FG_01+G_02+D_11+G_11+D_09)
-stepAIC(fitCK, scope=scope, direction = "forward")
-
-fit1K <- polr(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                K_10_C + SEXO + K_10_E + D2_05 + K_11 + EDAD + K_10_D + D_01 + 
-                D_07 + K_10_I, data = MD_K, Hess = TRUE, method = "probit")
-summary(fit1K) #AIC: 3513.382 
-
-PseudoR2(fit1K)
-
-### 2 AIC: 3540.153 ----
-fit2K <- polr(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                K_10_C + D_02 + K_10_E + D2_05 + K_11 + K_10_D + D_01 + K_10_I + 
-                TOTAL_PERSONAS, data = MD_K, Hess = TRUE, method = "probit")
-summary(fit2K) #AIC: 3540.153 
-PseudoR2(fit2K)
-
-### 3  AIC:  3346.052 ----
-fit3K_mass <- polr(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                K_12_O + K_10_C + K_12_I + SEXO + D_02 + K_10_D + K_12_H + 
-                K_11 + K_10_E + TOTAL_PERSONAS + K_12_C + EDAD + 
-                K_10_I + D_01, data = MD_K, Hess = TRUE, method = "probit")
-
-fit3K_ord <- clm(formula = factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                  K_12_O + K_10_C + K_12_I + SEXO + D_02 + K_10_D + K_12_H + 
-                  K_11 + K_10_E + TOTAL_PERSONAS + K_12_C + EDAD + 
-                  K_10_I + D_01, data = MD_K, link = "probit")
-summary(fit3K_mass)
-summary(fit3K_ord)
+fitCK <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09,
+              data = MD_K, Hess = TRUE, method = "probit")
+summary(fitCK) #AIC:3231.601
 
 
-#### pruebas ----
 # ---------------------------------------------------------------------------- #
 ## Categorizando Edad ----
 # ---------------------------------------------------------------------------- #
@@ -110,183 +73,207 @@ MD_Kc<- sqldf("select *,
              end as CEDAD
              from MD_K")
 
+# Correcciones por estandariza
+MD_K2 <- MD_Kc %>% 
+  mutate(K_09_VALOR = scale(K_09_VALOR)) %>%
+  mutate(D_11_P = scale(D_11_P)) %>%
+  mutate(G_11 = scale(G_11)) %>%
+  mutate(EDAD = scale(EDAD)) %>%
+  mutate(TOTAL_PERSONAS = scale(TOTAL_PERSONAS)) %>%
+  mutate(D_05 = scale(D_05))
+
+### Seleccion ----
 #Se hace selección automática cambiando edad por su versión categórica
-fitCKc <- polr(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09, data = MD_Kc, Hess = TRUE, method = "probit")
-scope <- list(lower=~FG_01+G_02+D_11+G_11+D_09, 
+fitCKc <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09, data = MD_K2, Hess = TRUE, method = "probit")
+scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09, 
               upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
                 D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
-                FG_01+G_02+D_11+G_11+D_09)
+                FG_01+G_02+D_11_P+G_11+D_09)
 stepAIC(fitCKc, scope=scope, direction = "forward")
 
 
 ### 4 AIC: 3297.959 ----
 #!!! Multicolinealidad, no converge
-fit4K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                    K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + K_10_D + SEXO + 
-                    K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
-                    D_01 + K_12_K, data = MD_Kc, Hess = TRUE, method = "probit")
+fit4K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + SEXO + 
+                     K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
+                     K_12_K, data = MD_K2, Hess = TRUE, method = "probit")
 
-fit4K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                    K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + K_10_D + SEXO + 
-                    K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
-                    D_01 + K_12_K, data = MD_Kc, link = "probit")
-summary(fit4K_mass)
+fit4K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + K_12_O + K_10_C + CEDAD + K_12_I + D2_05 + SEXO + 
+                   K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
+                   K_12_K, data = MD_K2, link = "probit")
+
+summary(fit4K_mass); vif(fit4K_mass)
 summary(fit4K_ord)
 
 ### 5 AIC: 3333.79  ----
-fit5K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                     K_12_O + K_10_C + CEDAD + K_12_I + K_10_D + SEXO + 
-                     K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
-                     D_01 + K_12_K, data = MD_Kc, Hess = TRUE, method = "probit")
+# Mejor modelo seleccionado sin usar pesos, estimado sin pesos
+fit5K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
+                     K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
+                     K_12_K, data = MD_K2, Hess = TRUE, method = "probit")
 
-fit5K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11 + G_11 + D_09 + 
-                   K_12_O + K_10_C + CEDAD + K_12_I + K_10_D + SEXO + 
-                   K_11 + K_12_H + K_10_E + K_12_C + TOTAL_PERSONAS + K_10_I + 
-                   D_01 + K_12_K, data = MD_Kc, link = "probit")
-summary(fit5K_mass)
+fit5K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
+                   K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
+                   K_12_K, data = MD_K2, link = "probit")
+
+summary(fit5K_mass); vif(fit5K_mass)
 summary(fit5K_ord)
+
+
+# ---------------------------------------------------------------------------- #
+## Pesos muestrales ----
+# ---------------------------------------------------------------------------- #
+
+personas_seleccionadas <- read_csv("Datos_originales/personas_seleccionadas.csv")
+pk <- personas_seleccionadas %>% 
+  dplyr::select(DIRECTORIO, FEX_C) %>% 
+  mutate(DIRECTORIO = as.character(DIRECTORIO))
+
+MD_Kpk <- MD_K2 %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
+rm(personas_seleccionadas, pk)
+
+### 6 AIC: 1477814.78 ----
+# Mejor modelo seleccionado sin usar pesos, estimado usando pesos
+fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
+                     K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
+                     K_12_K, data = MD_Kpk, Hess = TRUE, method = "probit",
+                     weights = FEX_C)
+
+fit6K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + K_12_O + K_10_C + CEDAD + K_12_I + SEXO + 
+                   K_11 + K_10_D + K_12_H + K_10_E + K_12_C + K_10_I + TOTAL_PERSONAS + 
+                   K_12_K,, data = MD_Kpk, link = "probit", weights = FEX_C)
+
+summary(fit6K_mass); vif(fit6K_mass)
+summary(fit6K_ord)
+
+
+### Seleccion ----
+fitCKpk <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09, 
+                data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
+scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09, 
+              upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
+                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
+                FG_01+G_02+D_11_P+G_11+D_09)
+stepAIC(fitCKpk, scope=scope, direction = "forward")
+
+### 7 AIC: 1412513.42  ----
+fit7K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + K_12_G + K_12_H + K_10_C + CEDAD + D2_05 + K_12_O + 
+                     K_10_D + SEXO + K_11 + D_02 + K_12_I + D2_03 + D_08 + K_10_E + 
+                     K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                     TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                     D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                     K_12_N + K_12_J, 
+                     data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
+
+fit7K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + K_12_G + K_12_H + K_10_C + CEDAD + D2_05 + K_12_O + 
+                   K_10_D + SEXO + K_11 + D_02 + K_12_I + D2_03 + D_08 + K_10_E + 
+                   K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                   TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                   D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                   K_12_N + K_12_J, data = MD_Kpk, link = "probit", weights = FEX_C)
+
+summary(fit7K_mass); vif(fit7K_mass)
+
+### 8 AIC: 1457926.79  ----
+# Mejor modelo seleccionado usando pesos, estimado usando pesos
+
+fit8K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
+                     K_10_D + SEXO + K_11 + K_12_I + D2_03 + D_08 + K_10_E + 
+                     K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                     TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                     D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                     K_12_N + K_12_J, data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
+
+fit8K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
+                   K_10_D + SEXO + K_11 + K_12_I + D2_03 + D_08 + K_10_E + 
+                   K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                   TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                   D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                   K_12_N + K_12_J, data = MD_Kpk, link = "probit", weights = FEX_C)
+
+summary(fit8K_mass); vif(fit8K_mass)
+summary(fit8K_ord)
+
+### 9 AIC:   ----
+# Mejor modelo seleccionado usando pesos, estimado sin pesos
+
+fit9K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
+                     K_10_D + SEXO + K_11 + K_12_I + D2_03 + D_08 + K_10_E + 
+                     K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                     TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                     D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                     K_12_N + K_12_J, data = MD_Kpk, Hess = TRUE, method = "probit")
+
+fit9K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + K_12_G + K_12_H + K_10_C + CEDAD + K_12_O + 
+                   K_10_D + SEXO + K_11 + K_12_I + D2_03 + D_08 + K_10_E + 
+                   K_10_I + D2_01 + K_10_H + K_12_C + K_12_A + K_12_D + K_12_L + 
+                   TOTAL_PERSONAS + K_09_VALOR + K_10_F + K_10_B + K_10_A + 
+                   D_10 + K_12_M + K_10_G + K_12_E + K_12_F + D_05 + K_12_B + 
+                   K_12_N + K_12_J, data = MD_Kpk, link = "probit")
+
+summary(fit9K_mass); vif(fit9K_mass)
+summary(fit9K_ord)
 
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 # Validación ----
+source('Ajuste_de_modelos/Ordinal/probit/Validacion.R')
 
 # ---------------------------------------------------------------------------- #
-
-## Multicolinealidad ----
-
-# Validacion ----
-vif(fit3K_mass)
-vif(fit4K_mass)
-vif(fit5K_mass)
-
-
-# ---------------------------------------------------------------------------- #
-
-
-## residuales ----
-### fit3 ----
-
-## residuales ----
-# Obtain the SBS/probability-scale residuals
-pres <- presid(fit3K_mass)
-
-p1 <- ggplot(data.frame(y = pres), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)");p1
-
-set.seed(101) # for reproducibility
-sres <- resids(fit3K_mass)
-
-p2 <- ggplot(data.frame(y = sres), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "tomato2", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); p2
-
-grid.arrange(p1, p2, ncol = 2)
-
-
-### fit5 ----
-# Obtain the SBS/probability-scale residuals
-pres_f5 <- presid(fit5K_mass)
-
-p1 <- ggplot(data.frame(y = pres_f5), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "#6B8E23", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (SBS)");p1
-
-set.seed(101) # for reproducibility
-sres_f5 <- resids(fit5K_mass)
-
-p2 <- ggplot(data.frame(y = sres_f5), aes(sample = y)) +
-  stat_qq(distribution = qunif, dparams = list(min = -1, max = 1), alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "#6B8E23", linewidth = 1, linetype= "dashed") +
-  xlab("Sample quantile") +
-  ylab("Theoretical quantile") + ggtitle("QQ-plot - Marijuana (Surrogate)"); p2
-
-grid.arrange(p1, p2, ncol = 2)
-
-
-# ---------------------------------------------------------------------------- #
-
-## matriz de confusión ----
-
-# Copiado del modelo de efectos mixtos
-# Función para categorizar
-categorizar <- function(x, Qp) {
-  if (x < Qp[1]) {
-    return("1")
-  } else if (x >=  Qp[1] && x <  Qp[2]) {
-    return("2")
-  } else if (x >=  Qp[2] && x <  Qp[3]) {
-    return("3")
-  } else if (x >=  Qp[3] && x <  Qp[4]) {
-    return("4")
-  } else {
-    return("5")
-  }
-}
-
-### fit3 ----
+#### fit5 - fit6 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
-hat_X <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
-                         K_12_O, K_10_C, K_12_I, SEXO, D_02, K_10_D, K_12_H, 
-                         K_11, K_10_E, TOTAL_PERSONAS, K_12_C, EDAD, 
-                         K_10_I, D_01)
-hat_X <- model.matrix(K_04 ~ ., hat_X)
-hat_X <- hat_X[,2:28] # - el intercepto
+hat_X5 <- MD_Kpk %>% dplyr::select(K_04, FG_01 ,G_02 ,D_11_P ,G_11 ,
+                                    D_09 ,K_12_O ,K_10_C ,CEDAD ,K_12_I ,SEXO ,
+                                    K_11 ,K_10_D ,K_12_H ,K_10_E ,K_12_C ,K_10_I ,TOTAL_PERSONAS ,
+                                    K_12_K)
+hat_X5 <- model.matrix(K_04 ~ ., hat_X5)
+hat_X5 <- hat_X5[,-1] # - el intercepto
 
-beta <- fit3K_ord$beta
+val_f5 <- validacion(fit_mass = fit5K_mass, fit_ord = fit5K_ord, hat_X = hat_X5, y = MD_Kpk$K_04)
+val_f6 <- validacion(fit_mass = fit6K_mass, fit_ord = fit6K_ord, hat_X = hat_X5, y = MD_Kpk$K_04)
 
-
-hat_y_f3 <- hat_X %*% beta
-Qp <- fit3K_ord$alpha #los puntos de corte interceptos estimados
-
-categorias_f3 <- sapply(hat_y_f3, categorizar, Qp)
-pred_f3 <- as.data.frame(cbind(MD_K$K_04, categorias_f3, hat_y_f3))
-
-#matriz de confusión con los valores reales en las filas, predichos columnas
-CM_fit3 <- table(pred_f3$V1, pred_f3$categorias_f3)
-
-
-### fit5 ----
+#### fit8 - fit9 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
-hat_X <- MD_Kc %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09, 
-                                   K_12_O, K_10_C, CEDAD, K_12_I, K_10_D, SEXO, 
-                                   K_11, K_12_H, K_10_E, K_12_C, TOTAL_PERSONAS, K_10_I, 
-                                   D_01, K_12_K,)
-hat_X <- model.matrix(K_04 ~ ., hat_X)
-hat_X <- hat_X[,-1] # - el intercepto
+hat_X8 <- MD_Kpk %>% dplyr::select(K_04, FG_01, G_02, D_11_P, G_11, 
+                                     D_09, K_12_G, K_12_H, K_10_C, CEDAD, K_12_O, 
+                                     K_10_D, SEXO, K_11, K_12_I, D2_03, D_08, K_10_E, 
+                                     K_10_I, D2_01, K_10_H, K_12_C, K_12_A, K_12_D, K_12_L, 
+                                     TOTAL_PERSONAS, K_09_VALOR, K_10_F, K_10_B, K_10_A, 
+                                     D_10, K_12_M, K_10_G, K_12_E, K_12_F, D_05, K_12_B, 
+                                     K_12_N, K_12_J)
+hat_X8 <- model.matrix(K_04 ~ ., hat_X8)
+hat_X8 <- hat_X8[,-1] # - el intercepto
 
-beta <- fit5K_ord$beta
+val_f8 <- validacion(fit_mass = fit8K_mass, fit_ord = fit8K_ord, hat_X = hat_X8)
+val_f9 <- validacion(fit_mass = fit9K_mass, fit_ord = fit9K_ord, hat_X = hat_X8)
 
-hat_y_f5 <- hat_X %*% beta
-Qp <- fit5K_ord$alpha #los puntos de corte interceptos estimados
-
-categorias_f5 <- sapply(hat_y_f5, categorizar, Qp)
-pred_f5 <- as.data.frame(cbind(MD_Kc$K_04, categorias_f5, hat_y_f5))
-
-#matriz de confusión con los valores reales en las filas, predichos columnas
-CM_fit5 <- table(pred_f5$V1, pred_f5$categorias_f5)
-
-
-### fitC ----
-fitCK <- clm(factor(K_04) ~ FG_01+G_02+D_11+G_11+D_09,
+#### fitC ----
+fitCK_mass <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09,
+              data = MD_K, Hess = TRUE, method = "probit")
+fitCK_ord  <- clm(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09,
              data = MD_K, link = "probit")
 
-hat_Xc <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11, G_11, D_09)
+hat_Xc <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11_P, G_11, D_09)
 hat_Xc <- model.matrix(K_04 ~ ., hat_Xc)
 hat_Xc <- hat_Xc[,-1] # - el intercepto
 
-beta_c <- fitCK$beta
-hat_yc <- hat_Xc %*% beta_c
-Qp_c <- fitCK$alpha #los puntos de corte intercepto estimados
+val_fC <- validacion(fit_mass = fitCK_mass, fit_ord = fitCK_ord, hat_X = hat_Xc)
 
-categorias_c <- sapply(hat_yc, categorizar, Qp_c)
-pred_control <- as.data.frame(cbind(MD_K$K_04, categorias_c, hat_yc))
 
-#matriz de confusión con los valores reales en las filas, predichos columnas
-CM_control <- table(pred_control$V1, pred_control$categorias)
+# P valores ----
+# Making Sandwiches with Bread and Meat
+vcov_ord <- sandwich(fit6K_ord)
+
+sqrt(diag(vcov_ord))
+coeftest(fit6K_ord, vcov = vcov_ord)
