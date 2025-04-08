@@ -271,42 +271,9 @@ hat_Xc <- hat_Xc[,-1] # - el intercepto
 val_fC <- validacion(fit_mass = fitCK_mass, fit_ord = fitCK_ord, hat_X = hat_Xc)
 
 
-#  ----
+# P valores ----
 # Making Sandwiches with Bread and Meat
-prueba1_mass <- sandwich(fit6K_mass)
-prueba1_ord  <- sandwich(fit6K_ord)
-#No son iguales. 
+vcov_ord <- sandwich(fit6K_ord)
 
-# Clustered Covariance Matrix Estimation
-prueba2_mass  <- vcovCL(fit6K_mass, type = "HC0", sandwich = TRUE)
-prueba2_ord   <- vcovCL(fit6K_ord, type = "HC0", sandwich = TRUE) 
-#NO son iguales. 
-
-#Heteroscedasticity and Autocorrelation Consistent
-prueba3_mass  <- vcovHAC(fit6K_mass, sandwich = TRUE)
-prueba3_ord   <- vcovHAC(fit6K_ord, sandwich = TRUE) 
-#NO son iguales
-
-# Heteroskedasticity-robust
-prueba4_mass <- vcovHC(fit6K_mass, type = "HC0", sandwich = TRUE)
-prueba4_ord  <- vcovHC(fit6K_ord, type = "HC0", sandwich = TRUE)
-# NO corre
-
-#Pero CL y HAC generan los mismos resultados. 
-all.equal(prueba2_mass, prueba3_mass)
-all.equal(prueba2_ord, prueba3_ord)
-
-all.equal(prueba1_mass, prueba3_mass)
-all.equal(prueba1_ord, prueba3_ord)
-
-## p valores
-sqrt(diag(prueba1_mass))
-coeftest(fit6K_mass, vcov = prueba1_mass)
-sqrt(diag(prueba1_ord))
-coeftest(fit6K_ord, vcov = prueba1_ord)
-
-
-sqrt(diag(prueba2_mass))
-coeftest(fit6K_mass, vcov = prueba2_mass)
-sqrt(diag(prueba2_ord))
-coeftest(fit6K_ord, vcov = prueba2_ord)
+sqrt(diag(vcov_ord))
+coeftest(fit6K_ord, vcov = vcov_ord)

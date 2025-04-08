@@ -242,5 +242,10 @@ hat_Xc <- hat_Xc[,-1] # - el intercepto
 
 val_fC <- validacion(fit_mass = fitCK_mass, fit_ord = fitCK_ord, hat_X = hat_Xc)
 
+# P valores ----
+# Making Sandwiches with Bread and Meat
+vcov_ord <- sandwich(fit6L_ord)
 
+sqrt(diag(vcov_ord))
+coeftest(fit6L_ord, vcov = vcov_ord)
 
