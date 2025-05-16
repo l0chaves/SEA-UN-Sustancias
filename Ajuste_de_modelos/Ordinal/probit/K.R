@@ -149,7 +149,7 @@ fitCKpk <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09,
                 data = MD_Kpk, Hess = TRUE, method = "probit", weights = FEX_C)
 stepAIC(fitCKpk, scope=scope, direction = "forward")
 
-### AIC: 1241268.18   ----
+### 7 AIC: 1241268.18   ----
 #NO converge
 fit7.1K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
                      D_09 + D_02 + D2_05 + SEXO + D2_06 + D_07 + F_12 + Q_03 + 
