@@ -80,14 +80,6 @@ MD_Kc<- sqldf("select *,
              end as CEDAD
              from MD_K")
 
-# Correcciones por estandarizacion
-MD_K2 <- MD_Kc %>% 
-  mutate(K_09_VALOR = scale(K_09_VALOR)) %>%
-  mutate(D_11_P = scale(D_11_P)) %>%
-  mutate(G_11 = scale(G_11)) %>%
-  mutate(EDAD = scale(EDAD)) %>%
-  mutate(TOTAL_PERSONAS = scale(TOTAL_PERSONAS)) %>%
-  mutate(D_05 = scale(D_05))
 
 # Correcciones por multicolinealidad
 MD_K3 <- MD_Kc %>% 
@@ -204,3 +196,50 @@ vcov_ord <- sandwich(fit6K_ord)
 
 sqrt(diag(vcov_ord))
 coeftest(fit6K_ord, vcov = vcov_ord)
+
+# Re evalular modelos ----
+MD_K <- C_k %>% 
+  filter(K_04 != "na") %>% #Y. borrando los registros de na
+  mutate(K_04 = factor(K_04, levels= c(1,2,3,4,5))) %>%
+  dplyr::select(K_04, K_09_VALOR, K_10_A, K_10_B, K_10_C, K_10_D, K_10_E, K_10_F, K_10_G, K_10_H, K_10_I, K_11, 
+                K_12_A, K_12_B, K_12_C, K_12_D, K_12_E, K_12_F, K_12_G, K_12_H, K_12_I, K_12_J, K_12_K, K_12_L, K_12_M, K_12_N, K_12_O, DIRECTORIO) %>% 
+  left_join(control, by=c("DIRECTORIO"="DIRECTORIO")) %>%
+  left_join(X, by=c("DIRECTORIO"="DIRECTORIO")) %>%
+  mutate_at(vars(3:27), as.factor) %>%
+  mutate(across(c(3:11, 13:27), ~relevel(., ref = "2")))
+
+MD_K <- sqldf("select *,
+             case when EDAD <= 17 then 'Teenagers'
+                  when EDAD <= 24 then 'Young'
+                  when EDAD <= 34 then 'Young Adult'
+                  when EDAD <= 44 then 'Adult'
+                  when EDAD <= 63 then 'Elderly'
+                  else 'Third Age'
+             end as CEDAD
+             from MD_K")
+
+MD <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11_P, G_11, 
+                         D_09, CEDAD, K_12_O, K_10_C, K_12_H, SEXO, K_12_I, 
+                         D2_05, K_10_D, K_10_E, K_11, K_12_C, K_10_I, D_01, 
+                         E_04, K_12_K, Q_03, DIRECTORIO)
+MD <- MD[complete.cases(MD),]
+
+personas_seleccionadas <- read_csv("Datos_originales/personas_seleccionadas.csv")
+pk <- personas_seleccionadas %>% 
+  dplyr::select(DIRECTORIO, FEX_C) %>% 
+  mutate(DIRECTORIO = as.character(DIRECTORIO))
+
+MD <- MD %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
+rm(personas_seleccionadas, pk)
+
+fitK_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                    D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                    D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                    E_04 + K_12_K + Q_03, data = MD, Hess = TRUE, method = "probit",
+                  weights = FEX_C, start = c(fit6K_mass$coefficients, fit6K_mass$zeta))
+
+fitK_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                   D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                   E_04 + K_12_K + Q_03, data = MD, link = "probit", weights = MD_Kpk$FEX_C,
+                 start = c(fit6K_ord$alpha, fit6K_ord$beta))
