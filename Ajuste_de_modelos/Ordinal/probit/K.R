@@ -1,6 +1,3 @@
-load("Limpieza_tablas/tablas.RData")
-source('Ajuste_de_modelos/variables de control.R')
-
 library("MASS")
 library("dplyr")
 library("DescTools")
@@ -13,6 +10,8 @@ library("sqldf")
 library("sandwich")
 library("lmtest")
 
+load("Limpieza_tablas/tablas.RData")
+source('Ajuste_de_modelos/variables de control.R')
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 
@@ -102,23 +101,39 @@ MD_K3 <- MD_Kc %>%
 #Se hace selección automática cambiando edad por su versión categórica
 fitCKc <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09+CEDAD, data = MD_K3, Hess = TRUE, method = "probit")
 scope <- list(lower=~FG_01+G_02+D_11_P+G_11+CEDAD, 
-              upper=~ K_04+K_09_VALOR+K_10_A+K_10_B+K_10_C+K_10_D+K_10_E+K_10_F+K_10_G+K_10_H+K_10_I+K_11+K_12_A+K_12_B+K_12_C+K_12_D+K_12_E+K_12_F+K_12_G+K_12_H+K_12_I+K_12_J+K_12_K+K_12_L+K_12_M+K_12_N+K_12_O+
-                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
-                FG_01+G_02+D_11_P+G_11+D_09)
+              upper=~ FG_01 + G_02 + D_11_P + G_11 + D_09 + DIRECTORIO + 
+                D_01 + D_02 + D_06 + D_07 + D_08 + D_10 + D2_01 + D2_03 + D2_05 + D2_06 + 
+                SEXO + TIPO + ESTRATO + F_12 + E_04 + Q_02 + Q_03 + D_05 + EDAD + TOTAL_PERSONAS + 
+                K_04 + K_09_VALOR + K_10_A + K_10_B + K_10_C + K_10_D + K_10_E + K_10_F + K_10_G + K_10_H + K_10_I + 
+                K_11 + K_12_A + K_12_B + K_12_C + K_12_D + K_12_E + K_12_F + K_12_G + K_12_H + K_12_I + K_12_J + K_12_K + K_12_L + K_12_M + K_12_N + K_12_O + 
+                CEDAD)
 stepAIC(fitCKc, scope=scope, direction = "forward")
 
-
-### 5 AIC: 2268.84  ----
+### 5 AIC: 2267.17 ----
 # Mejor modelo seleccionado sin usar pesos, estimado sin pesos
+fit4K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                     D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                     E_04 + K_12_K + Q_03, data = MD_K3, Hess = TRUE, method = "probit")
+
+fit4K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                   D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                   E_04 + K_12_K + Q_03, data = MD_K3, link = "probit")
+
+summary(fit4K_mass); vif(fit4K_mass)
+summary(fit4K_ord)
+
+### 5 AIC: 2267.17  ----
 fit5K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + CEDAD + K_12_O + K_10_C + K_12_I + SEXO + 
-                     K_10_D + K_12_H + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
-                     K_12_K + D2_05, data = MD_K3, Hess = TRUE, method = "probit")
+                     D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                     D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                     E_04 + K_12_K + Q_03, data = MD_K3, Hess = TRUE, method = "probit")
 
 fit5K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + CEDAD + K_12_O + K_10_C + K_12_I + SEXO + 
-                   K_10_D + K_12_H + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
-                   K_12_K + D2_05, data = MD_K3, link = "probit")
+                   D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                   D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                   E_04 + K_12_K + Q_03, data = MD_K3, link = "probit")
 
 summary(fit5K_mass); vif(fit5K_mass)
 summary(fit5K_ord)
@@ -136,15 +151,15 @@ rm(personas_seleccionadas, pk)
 ### 6 AIC: 1477814.78 ----
 # Mejor modelo seleccionado sin usar pesos, estimado usando pesos
 fit6K_mass <- polr(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + CEDAD + K_12_O + K_10_C + K_12_I + SEXO + 
-                     K_10_D + K_12_H + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
-                     K_12_K + D2_05, data = MD_Kpk, Hess = TRUE, method = "probit",
+                     D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                     D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                     E_04 + K_12_K + Q_03, data = MD_Kpk, Hess = TRUE, method = "probit",
                      weights = FEX_C, start = c(fit5K_mass$coefficients, fit5K_mass$zeta))
 
 fit6K_ord <- clm(factor(K_04) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + CEDAD + K_12_O + K_10_C + K_12_I + SEXO + 
-                   K_10_D + K_12_H + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
-                   K_12_K + D2_05, data = MD_Kpk, link = "probit", weights = FEX_C,
+                   D_09 + CEDAD + K_12_O + K_10_C + K_12_H + SEXO + K_12_I + 
+                   D2_05 + K_10_D + K_10_E + K_11 + K_12_C + K_10_I + D_01 + 
+                   E_04 + K_12_K + Q_03, data = MD_Kpk, link = "probit", weights = FEX_C,
                    start = c(fit5K_ord$alpha, fit5K_ord$beta))
 
 summary(fit6K_mass); vif(fit6K_mass)
@@ -159,9 +174,9 @@ source('Ajuste_de_modelos/Ordinal/probit/Validacion.R')
 #### fit5 - fit6 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
 hat_X5 <- MD_Kpk %>% dplyr::select(K_04, FG_01, G_02, D_11_P, G_11, 
-                                     D_09, CEDAD, K_12_O, K_10_C, K_12_I, SEXO, 
-                                     K_10_D, K_12_H, K_10_E, K_11, K_12_C, K_10_I, D_01, 
-                                     K_12_K, D2_05,)
+                                     D_09, CEDAD, K_12_O, K_10_C, K_12_H, SEXO, K_12_I, 
+                                     D2_05, K_10_D, K_10_E, K_11, K_12_C, K_10_I, D_01, 
+                                     E_04, K_12_K, Q_03)
 hat_X5 <- model.matrix(K_04 ~ ., hat_X5)
 hat_X5 <- hat_X5[,-1] # - el intercepto
 
@@ -169,6 +184,7 @@ val_f5 <- validacion(fit_mass = fit5K_mass, fit_ord = fit5K_ord, hat_X = hat_X5,
 val_f6 <- validacion(fit_mass = fit6K_mass, fit_ord = fit6K_ord, hat_X = hat_X5, y = MD_Kpk$K_04)
 
 fit5K_mass$coefficients/fit6K_mass$coefficients
+
 #### fitC ----
 fitCK_mass <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09+CEDAD,
               data = MD_K3, Hess = TRUE, method = "probit")

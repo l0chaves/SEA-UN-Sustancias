@@ -1,7 +1,3 @@
-load("Limpieza_tablas/tablas.RData")
-source("Ajuste_de_modelos/variables de control.R")
-rm(list = setdiff(ls(), c("C_l", "control", "d", "d2", "encuestas")))
-
 library("MASS")
 library("dplyr")
 library("DescTools")
@@ -14,23 +10,33 @@ library("sqldf")
 library("sandwich")
 library("lmtest")
 
+load("Limpieza_tablas/tablas.RData")
+source('Ajuste_de_modelos/variables de control.R')
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 
 # Co-variables ----
+#Se tienen en cuenta variables socio-demográficas para usar como covariables
 X <- d %>%
   left_join(d2,by=c("DIRECTORIO"="DIRECTORIO")) %>%
   left_join(encuestas,by=c("DIRECTORIO"="DIRECTORIO")) %>%
-  dplyr::select(`DIRECTORIO`, `D_01`, `D_02`, `D_07`, `D_08`, `D_10`,
-                `D2_01`, `D2_03`, `D2_05`, SEXO, EDAD, TOTAL_PERSONAS, `D_05`) %>%
-  mutate_at(vars(2,10), as.factor) %>%
-  mutate_at(vars(11, 13), as.numeric)
+  left_join(C_f,by=c("DIRECTORIO"="DIRECTORIO")) %>%
+  left_join(C_e,by=c("DIRECTORIO"="DIRECTORIO")) %>%
+  left_join(tratamiento,by=c("DIRECTORIO"="DIRECTORIO")) %>%
+  dplyr::select(`DIRECTORIO`, `D_01`, `D_02`, `D_06`, `D_07`, `D_08`, `D_10`,
+                `D2_01`, `D2_03`, `D2_05`, `D2_06`, SEXO, TIPO, ESTRATO,
+                `F_12`, `E_04`, `Q_02`, `Q_03`,
+                `D_05`, EDAD, TOTAL_PERSONAS) %>%
+  mutate_at(vars(2:18), as.factor) %>%
+  mutate_at(vars(19,21), as.numeric) %>%
+  mutate(D2_05 = case_when(D2_05 %in% c(1, 2, 3,  9) ~ "1",
+    TRUE ~ as.character(D2_05)), D2_05 = factor(D2_05))
 
 summary(X)
 
+rm(list = setdiff(ls(), c("C_l", "control", "X")))
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
-
 MD_L <- C_l %>% 
   filter(L_03 != "na") %>% #Y. borrando los registros de na
   mutate(L_03 = factor(L_03, levels= c(1,2,3,4,5))) %>%
@@ -67,43 +73,29 @@ MD_Lc<- sqldf("select *,
              end as CEDAD
              from MD_L")
 
-# Correcciones por estandariza
-MD_L2 <- MD_Lc %>% 
-  mutate(L_08_VALOR = scale(L_08_VALOR)) %>%
-  mutate(D_11_P = scale(D_11_P)) %>%
-  mutate(G_11 = scale(G_11)) %>%
-  mutate(EDAD = scale(EDAD)) %>%
-  mutate(TOTAL_PERSONAS = scale(TOTAL_PERSONAS)) %>%
-  mutate(D_05 = scale(D_05))
-
 ### Seleccion ----
 #Se hace selección automática cambiando edad por su versión categórica
-fitCL <- polr(factor(L_03) ~ FG_01+G_02+D_11_P+G_11+D_09, data = MD_L2, Hess = TRUE, method = "probit")
-scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09, 
-              upper=~ L_03+ L_08_VALOR+ L_09_A+ L_09_B+ L_09_C+ L_09_D+ L_09_E+ L_09_F+ L_09_G+ L_09_H+ L_09_I+ L_10_A+ L_10_B+ L_11_A+L_11_B+L_11_C+L_11_D+L_11_E+L_11_F+L_11_G+L_11_H+L_11_I+L_11_J+L_11_K+L_11_L+L_11_M+L_11_N+L_11_O+
-                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
-                FG_01+G_02+D_11_P+G_11+D_09)
+fitCL <- polr(factor(L_03) ~ FG_01+G_02+D_11_P+G_11+D_09+CEDAD, data = MD_Lc, Hess = TRUE, method = "probit")
+scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09+CEDAD, 
+              upper=~ L_08_VALOR+ L_09_A+ L_09_B+ L_09_C+ L_09_D+ L_09_E+ L_09_F+ L_09_G+ L_09_H+ L_09_I+ L_10_A+ L_10_B+ L_11_A+L_11_B+L_11_C+L_11_D+L_11_E+L_11_F+L_11_G+L_11_H+L_11_I+L_11_J+L_11_K+L_11_L+L_11_M+L_11_N+L_11_O+
+                FG_01 + G_02 + D_11_P + G_11 + D_09 +
+                D_01 + D_02 + D_06 + D_07 + D_08 + D_10 + D2_01 + D2_03 + D2_05 + D2_06 + 
+                SEXO + TIPO + ESTRATO + F_12 + E_04 + Q_02 + Q_03 + D_05 + CEDAD + TOTAL_PERSONAS)
 
 stepAIC(fitCL, scope=scope, direction = "forward")
 
-### 4 AIC: 630.514 ----
-fit4L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + D_09 + L_11_H +
-                   L_09_C + L_11_O + CEDAD + L_11_A + D_10, 
-                   data = MD_L2, Hess = TRUE, method = "probit")
-
-fit4L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + D_09 + L_11_H +
-                 L_09_C + L_11_O + CEDAD + L_11_A + D_10, data = MD_L2, link = "probit")
-
-summary(fit4L_mass); vif(fit4L_mass)
-summary(fit4L_ord)
-
-### 5 AIC: 632.81 ----
+### 5 AIC: 537.92  ----
 # Mejor modelo seleccionado sin usar pesos, estimado sin pesos
-fit5L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + D_09 + L_11_H +
-                   L_09_C + L_11_O + CEDAD + L_11_A, data = MD_L2, Hess = TRUE, method = "probit")
 
-fit5L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + D_09 + L_11_H +
-                 L_09_C + L_11_O + CEDAD + L_11_A, data = MD_L2, link = "probit")
+fit5L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + CEDAD + L_11_H + D2_05 + L_11_O +
+                     L_11_A + Q_02 + F_12 + D_08 + 
+                     L_11_B + L_09_A, data = MD_Lc, Hess = TRUE, method = "probit")
+
+fit5L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + CEDAD + L_11_H + D2_05 + L_11_O +
+                   L_11_A + Q_02 + F_12 + D_08 + 
+                   L_11_B + L_09_A, data = MD_Lc, link = "probit")
 
 summary(fit5L_mass); vif(fit5L_mass)
 summary(fit5L_ord)
@@ -117,130 +109,50 @@ pk <- personas_seleccionadas %>%
   dplyr::select(DIRECTORIO, FEX_C) %>% 
   mutate(DIRECTORIO = as.character(DIRECTORIO))
 
-MD_Lpk <- MD_L2 %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
+MD_Lpk <- MD_Lc %>% left_join(pk, by=c("DIRECTORIO"="DIRECTORIO"))
 rm(personas_seleccionadas, pk)
 
 ### 6 AIC:  307013.80 ----
 # Mejor modelo seleccionado sin usar pesos, estimado usando pesos
-fit6L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + D_09 + L_11_H +
-                     L_09_C + L_11_O + CEDAD + L_11_A, 
+fit6L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                     D_09 + CEDAD + L_11_H + D2_05 + L_11_O +
+                     L_11_A + Q_02 + F_12 + D_08 + L_11_B + L_09_A, 
                    start =  c(fit5L_mass$coefficients, fit5L_mass$zeta),
                    data = MD_Lpk, Hess = TRUE, method = "probit", weights = FEX_C)
 
-fit6L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + D_09 + L_11_H +
-                   L_09_C + L_11_O + CEDAD + L_11_A, 
+fit6L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
+                   D_09 + CEDAD + L_11_H + D2_05 + L_11_O +
+                   L_11_A + Q_02 + F_12 + D_08 + L_11_B + L_09_A,
                  data = MD_Lpk, link = "probit", weights = FEX_C)
 
 summary(fit6L_mass); vif(fit6L_mass)
 summary(fit6L_ord)
 
-### Seleccion ----
-#Se hace selección automática usando los pesos muestrales
-fitLpk <- polr(factor(L_03) ~ FG_01+G_02+D_11_P+G_11+D_09, data = MD_Lpk, Hess = TRUE, method = "probit", weights = FEX_C)
-scope <- list(lower=~FG_01+G_02+D_11_P+G_11+D_09, 
-              upper=~ L_03+ L_08_VALOR+ L_09_A+ L_09_B+ L_09_C+ L_09_D+ L_09_E+ L_09_F+ L_09_G+ L_09_H+ L_09_I+ L_10_A+ L_10_B+ L_11_A+L_11_B+L_11_C+L_11_D+L_11_E+L_11_F+L_11_G+L_11_H+L_11_I+L_11_J+L_11_K+L_11_L+L_11_M+L_11_N+L_11_O+
-                D_01+D_02+D_07+D_08+D_10+D2_01+D2_03+D2_05+TOTAL_PERSONAS+D_05+CEDAD+SEXO+
-                FG_01+G_02+D_11_P+G_11+D_09)
-
-stepAIC(fitLpk, scope=scope, direction = "forward")
-
-### 7 AIC:  268486.55  ----
-fit7L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + L_11_H + L_11_O + CEDAD + D_02 + D2_05 + D_08 + D2_03 + 
-                     D_05 + D2_01 + L_11_B + L_11_N + SEXO + L_11_K + L_09_F + 
-                     L_11_D + L_11_G + L_11_A + L_09_H + L_09_A + L_11_E + D_01 + 
-                     L_09_E + TOTAL_PERSONAS + L_08_VALOR + L_09_I + L_11_I + 
-                     L_11_M, data = MD_Lpk, Hess = TRUE, method = "probit", weights = FEX_C)
-
-fit7L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + L_11_H + L_11_O + CEDAD + D_02 + D2_05 + D_08 + D2_03 + 
-                   D_05 + D2_01 + L_11_B + L_11_N + SEXO + L_11_K + L_09_F + 
-                   L_11_D + L_11_G + L_11_A + L_09_H + L_09_A + L_11_E + D_01 + 
-                   L_09_E + TOTAL_PERSONAS + L_08_VALOR + L_09_I + L_11_I + 
-                   L_11_M, data = MD_Lpk, link = "probit", weights = FEX_C)
-
-summary(fit7L_mass); vif(fit7L_mass)
-summary(fit7L_ord)
-
-### 8 AIC: 279765.62  ----
-# Mejor modelo seleccionado usando pesos, estimado usando pesos
-fit8L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + L_11_H + L_11_O + CEDAD + D_08 + D2_03 + 
-                     D_05 + D2_01 + L_11_B + L_11_N + SEXO + L_11_K + L_09_F + 
-                     L_11_D + L_11_G + L_11_A + L_09_H + L_09_A + L_11_E + D_01 + 
-                     L_09_E + TOTAL_PERSONAS + L_08_VALOR + L_09_I + L_11_I + 
-                     L_11_M, data = MD_Lpk, Hess = TRUE, method = "probit", weights = FEX_C)
-
-fit8L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + L_11_H + L_11_O + CEDAD + D_08 + D2_03 + 
-                   D_05 + D2_01 + L_11_B + L_11_N + SEXO + L_11_K + L_09_F + 
-                   L_11_D + L_11_G + L_11_A + L_09_H + L_09_A + L_11_E + D_01 + 
-                   L_09_E + TOTAL_PERSONAS + L_08_VALOR + L_09_I + L_11_I + 
-                   L_11_M, data = MD_Lpk, link = "probit", weights = FEX_C)
-
-summary(fit8L_mass); vif(fit8L_mass)
-summary(fit8L_ord)
-
-### 9 AIC: 668.69   ----
-# Mejor modelo seleccionado usando pesos, estimado sin pesos
-fit9L_mass <- polr(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                     D_09 + L_11_H + L_11_O + CEDAD + D_08 + D2_03 + 
-                     D_05 + D2_01 + L_11_B + L_11_N + SEXO + L_11_K + L_09_F + 
-                     L_11_D + L_11_G + L_11_A + L_09_H + L_09_A + L_11_E + D_01 + 
-                     L_09_E + TOTAL_PERSONAS + L_08_VALOR + L_09_I + L_11_I + 
-                     L_11_M, data = MD_Lpk, Hess = TRUE, method = "probit")
-
-fit9L_ord <- clm(factor(L_03) ~ FG_01 + G_02 + D_11_P + G_11 + 
-                   D_09 + L_11_H + L_11_O + CEDAD + D_08 + D2_03 + 
-                   D_05 + D2_01 + L_11_B + L_11_N + SEXO + L_11_K + L_09_F + 
-                   L_11_D + L_11_G + L_11_A + L_09_H + L_09_A + L_11_E + D_01 + 
-                   L_09_E + TOTAL_PERSONAS + L_08_VALOR + L_09_I + L_11_I + 
-                   L_11_M, data = MD_Lpk, link = "probit")
-
-summary(fit9L_mass); vif(fit9L_mass)
-summary(fit9L_ord)
-
-# ---------------------------------------------------------------------------- #
-# ---------------------------------------------------------------------------- #
 # Validación ----
 source('Ajuste_de_modelos/Ordinal/probit/Validacion.R')
 
 # ---------------------------------------------------------------------------- #
 #### fit5 - fit6 ----
 #creo la matriz diseño con solo las variables seleccionadas en el modelo
-hat_X5 <- MD_Lpk %>% dplyr::select(L_03, FG_01 ,G_02 ,D_11_P ,G_11 ,
-                                   D_09, L_11_H, L_09_C, L_11_O, CEDAD, L_11_A)
+hat_X5 <- MD_Lpk %>% dplyr::select(L_03, FG_01, G_02, D_11_P, G_11, 
+                                     D_09, CEDAD, L_11_H, D2_05, L_11_O,
+                                     L_11_A, Q_02, F_12, D_08, L_11_B, L_09_A)
 hat_X5 <- model.matrix(L_03 ~ ., hat_X5)
 hat_X5 <- hat_X5[,-1] # - el intercepto
 
 val_f5 <- validacion(fit_mass = fit5L_mass, fit_ord = fit5L_ord, hat_X = hat_X5, y = MD_Lpk$L_03)
 val_f6 <- validacion(fit_mass = fit6L_mass, fit_ord = fit6L_ord, hat_X = hat_X5, y = MD_Lpk$L_03)
 
-                     #### fit8 - fit9 ----
-#creo la matriz diseño con solo las variables seleccionadas en el modelo
-hat_X8 <- MD_Lpk %>% dplyr::select(L_03, FG_01, G_02, D_11_P, G_11, 
-                                   D_09, L_11_H, L_11_O, CEDAD, D_08, D2_03, 
-                                   D_05, D2_01, L_11_B, L_11_N, SEXO, L_11_K, L_09_F, 
-                                   L_11_D, L_11_G, L_11_A, L_09_H, L_09_A, L_11_E, D_01, 
-                                   L_09_E, TOTAL_PERSONAS, L_08_VALOR, L_09_I, L_11_I, 
-                                   L_11_M)
-hat_X8 <- model.matrix(L_03 ~ ., hat_X8)
-hat_X8 <- hat_X8[,-1] # - el intercepto
-
-val_f8 <- validacion(fit_mass = fit8L_mass, fit_ord = fit8L_ord, hat_X = hat_X8, y = MD_Lpk$L_03)
-val_f9 <- validacion(fit_mass = fit9L_mass, fit_ord = fit9L_ord, hat_X = hat_X8, y = MD_Lpk$L_03)
-
+ 
 #### fitC ----
-fitCK_mass <- polr(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09,
-                   data = MD_K, Hess = TRUE, method = "probit")
-fitCK_ord  <- clm(factor(K_04) ~ FG_01+G_02+D_11_P+G_11+D_09,
-                  data = MD_K, link = "probit")
+fitCL_mass <- polr(factor(L_03) ~ FG_01+G_02+D_11_P+G_11+D_09+CEDAD, data = MD_Lc, Hess = TRUE, method = "probit")
+fitCL_ord  <- clm(factor(L_03) ~ FG_01+G_02+D_11_P+G_11+D_09+CEDAD, data = MD_Lc, link = "probit")
 
-hat_Xc <- MD_K %>% dplyr::select(K_04, FG_01, G_02, D_11_P, G_11, D_09)
-hat_Xc <- model.matrix(K_04 ~ ., hat_Xc)
+hat_Xc <- MD_Lc %>% dplyr::select(L_03, FG_01, G_02, D_11_P, G_11, D_09, CEDAD)
+hat_Xc <- model.matrix(L_03 ~ ., hat_Xc)
 hat_Xc <- hat_Xc[,-1] # - el intercepto
 
-val_fC <- validacion(fit_mass = fitCK_mass, fit_ord = fitCK_ord, hat_X = hat_Xc)
+val_fC <- validacion(fit_mass = fitCL_mass, fit_ord = fitCL_ord, hat_X = hat_Xc, y = MD_Lpk$L_03)
 
 # P valores ----
 # Making Sandwiches with Bread and Meat
@@ -249,3 +161,4 @@ vcov_ord <- sandwich(fit6L_ord)
 sqrt(diag(vcov_ord))
 coeftest(fit6L_ord, vcov = vcov_ord)
 
+fit5L_mass$coefficients/fit6L_mass$coefficients
