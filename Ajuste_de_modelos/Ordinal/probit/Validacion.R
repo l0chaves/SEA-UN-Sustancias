@@ -73,7 +73,7 @@ validacion = function(fit_mass, fit_ord, hat_X, y){
   pred <- as.data.frame(cbind(y, categorias, hat_y))
   
   #matriz de confusión con los valores reales en las filas, predichos columnas
-  CM <- table(pred$y, pred$categorias); print(CM) 
+  CM <- table(factor(pred$y, 1:5), factor(pred$categorias, 1:5)); print(CM) 
   
   ## Accuracy ----
   Accuracy <- cbind(CM_cumsum(CM)/nrow(hat_X), c(1:5))
@@ -82,6 +82,6 @@ validacion = function(fit_mass, fit_ord, hat_X, y){
   plot(x= c(1:5), y=Accuracy[,1], type = "o", col = "blue", pch = 16, ylim = c(0, 1), 
        xlab = "Distancia", ylab = "Presicion", main = "")
   
-  results = list(multicol, residual, confusion = CM, Accuracy)
+  results = list(predicciones = pred, multicolinealidad =multicol, residuales = residual, confusion = CM, presicion = Accuracy)
   return(results)
 }
