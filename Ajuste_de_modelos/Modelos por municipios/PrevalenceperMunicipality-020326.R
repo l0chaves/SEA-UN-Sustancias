@@ -141,9 +141,7 @@ mod_taba_1<-glm(Formula1,offset=log(Poblacion),family=poisson(log),data=tabaco)
 mod_taba_2<-overglm(Formula1  ,offset=log(Poblacion),family = "ztnb1(log)",data=tabaco)
 mod_taba_3<-update(mod_taba_2 ,family="ztnb2(log)")
 mod_taba_4<-update(mod_taba_2 ,family="ztnbf(log)")
-mod_taba_5<-update(mod_taba_1,family=quasipoisson())
 AIC(mod_taba_1,mod_taba_2,mod_taba_3,mod_taba_4)
-#adjR2(mod_taba_1,mod_taba_5)
 
 summary(mod_taba_4)
 
