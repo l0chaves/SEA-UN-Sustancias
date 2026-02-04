@@ -51,12 +51,164 @@ TerriData <- read_delim("TerriData_Dim1.txt",
                         trim_ws = TRUE)
 
 TerriData1<-TerriData%>%filter(Indicador == "Extensión")%>%select(Municipio=Entidad,MPIO=`Código Entidad`,Superficie= `Dato Numérico`) 
-TerriData2<-TerriData%>%filter(Indicador == "Densidad poblacional", Año==2019)%>%select(Municipio=Entidad,MPIO=`Código Entidad`,Densidad= `Dato Numérico`) 
+TerriData2<-TerriData%>%filter(Indicador == "Densidad poblacional", Año==2019,Mes == 12)%>%select(Municipio=Entidad,MPIO=`Código Entidad`,Densidad= `Dato Numérico`) 
 
 
+
+
+
+
+
+# Vivienda y acceso a servicios públicos ---------------------------------------------------------------
+
+TerriDataDim3 <- read_delim("TerriData_Dim3.txt", 
+                        delim = "|", escape_double = FALSE, 
+                        col_types = cols(`Dato Numérico` = col_number()), 
+                        locale = locale(decimal_mark = ",", grouping_mark = "."), 
+                        trim_ws = TRUE)
+
+TerriData3 <- TerriDataDim3 %>%
+  filter(Indicador == "Penetración de banda ancha", Año == 2019,Mes == 12) %>%
+  select(Municipio = Entidad,
+         MPIO = `Código Entidad`,
+         Internet_Coverage = `Dato Numérico`)
+
+TerriData4 <- TerriDataDim3 %>%
+  filter(Indicador == "Cobertura de alcantarillado (REC)", Año == 2019,Mes == 12) %>%
+  select(Municipio = Entidad,
+         MPIO = `Código Entidad`,
+         Sewer_coverage = `Dato Numérico`)
+
+
+
+# Educacion ---------------------------------------------------------------
+TerriDataDim4 <- read_delim("TerriData_Dim4.txt", 
+                            delim = "|", escape_double = FALSE, 
+                            col_types = cols(`Dato Numérico` = col_number()), 
+                            locale = locale(decimal_mark = ",", grouping_mark = "."), 
+                            trim_ws = TRUE)
+
+TerriData6 <- TerriDataDim4 %>%
+  filter(
+    Indicador == "Cobertura bruta en educación primaria",
+    Año == 2019,
+    Mes == 12
+  ) %>%
+  select(
+    Municipio = Entidad,
+    MPIO = `Código Entidad`,
+    primary_school_coverage = `Dato Numérico`
+  )
+TerriData7 <- TerriDataDim4 %>%
+  filter(
+    Indicador == "Cobertura bruta en educación secundaria",
+    Año == 2019,
+    Mes == 12
+  ) %>%
+  select(
+    Municipio = Entidad,
+    MPIO = `Código Entidad`,
+    secondary_school_coverage = `Dato Numérico`
+  )
+
+TerriData8 <- TerriDataDim4 %>%
+  filter(
+    Indicador == "Cobertura bruta en educación media",
+    Año == 2019,
+    Mes == 12
+  ) %>%
+  select(
+    Municipio = Entidad,
+    MPIO = `Código Entidad`,
+    HighSchool_coverage = `Dato Numérico`
+  )
+
+
+
+TerriData9 <- TerriDataDim4 %>%
+  filter(
+    Indicador == "Tasa de deserción intra-anual del sector oficial en educación básica y media (Desde transición hasta once)",
+    Año == 2019,
+    Mes == 12
+  ) %>%
+  select(
+    Municipio = Entidad,
+    MPIO = `Código Entidad`,
+    dropout_rate = `Dato Numérico`
+  )
+
+
+# Seguridad Y Convivencia Ciudadana ---------------------------------------
+TerriDataDim6 <- read_delim("TerriData_Dim6.txt", 
+                            delim = "|", escape_double = FALSE, 
+                            col_types = cols(`Dato Numérico` = col_number()), 
+                            locale = locale(decimal_mark = ",", grouping_mark = "."), 
+                            trim_ws = TRUE)
+TerriData10 <- TerriDataDim6 %>%
+  filter(
+    Indicador == "Tasa de violencia intrafamiliar por cada 100.000 habitantes",
+    Año == 2019,
+    Mes == 12
+  ) %>%
+  select(
+    Municipio = Entidad,
+    MPIO = `Código Entidad`,
+     Domestic_Violence_Rate= `Dato Numérico`
+  )
+
+
+
+# Health ------------------------------------------------------------------
+
+TerriDataDim5 <- read_delim("TerriData_Dim5.txt", 
+                            delim = "|", escape_double = FALSE, 
+                            col_types = cols(`Dato Numérico` = col_number()), 
+                            locale = locale(decimal_mark = ",", grouping_mark = "."), 
+                            trim_ws = TRUE)
+TerriData11 <- TerriDataDim5 %>%
+  filter(
+    Indicador == "Tasa de negligencia y abandono",
+    Año == 2019,
+    Mes == 12
+  ) %>%
+  select(
+    Municipio = Entidad,
+    MPIO = `Código Entidad`,
+    Neglect_and_abandonment= `Dato Numérico`
+  )
+TerriData12 <- TerriDataDim5 %>%
+  filter(
+    Indicador == "Afiliados al SGSSS",
+    Año == 2019,
+    Mes == 12
+  ) %>%
+  select(
+    Municipio = Entidad,
+    MPIO = `Código Entidad`,
+    Social_security= `Dato Numérico`
+  )
+
+
+
+
+## Union Terridatas
 TerriDatas <- TerriData1 %>%
-  left_join(TerriData2, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))
+  left_join(TerriData2, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+  left_join(TerriData3, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+  left_join(TerriData4, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+  left_join(TerriData6, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+  left_join(TerriData7, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+  left_join(TerriData8, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+  left_join(TerriData9, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+  left_join(TerriData10, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+left_join(TerriData11, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))%>%
+left_join(TerriData12, by = c("Municipio" = "Municipio", "MPIO" = "MPIO"))
+
 TerriDatas$MPIO[TerriDatas$MPIO == 88000] <- 88001 #Error en la marcacion de la DIvipola
+
+
+View(TerriDatas)
+
 #Uniendo las poblacionales
 
 TablaTotal <- Poblacion %>%
@@ -73,6 +225,6 @@ TablaTotal<-within(TablaTotal,{ Superficie<- Superficie/100   #COMO SUPERFICIE E
                          
                          })
 
-
+View(TablaTotal)
 saveRDS(TablaTotal, "~/GitHub/SEMILLERO-SEA-UN/Ajuste_de_modelos/Modelos por municipios/Regresores.rds")
 
