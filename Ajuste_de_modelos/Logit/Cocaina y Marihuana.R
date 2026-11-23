@@ -1,6 +1,7 @@
 ########## Modelo de regresión logistica para consumo en los ultimos 12 meses ##########
 
 # Primero, correr el script "Datos.R"
+source("Limpieza_tablas/Datos.R")
 
 ##### Librerias #####
 library(dplyr)
@@ -14,7 +15,7 @@ library(lmtest)
 
 
 ##### Revisando que varibles tienen NA 
-missings <- function(x) return(sum(is.na(x)))
+missings = function(x) return(sum(is.na(x)))
 apply(DF_ilicitas,2,missings)
 
 ##### DF con la def de consumo 12 meses de las drogas ilicitas #####
@@ -102,9 +103,9 @@ ilicitas12m = sqldf("select *,
 
 # quitar NA's de las y
 ilicitas12m <- sqldf("
-SELECT * 
-FROM ilicitas12m
-WHERE K_03 != '9' AND L_02 != '9'
+  SELECT * 
+  FROM ilicitas12m
+  WHERE K_03 != '9' AND L_02 != '9'
 ")
 # K_03: marihuana
 ilicitas12m = sqldf("select *,
@@ -120,7 +121,7 @@ ilicitas12m = sqldf("select *,
              from ilicitas12m")
 
 ##### categorias de referencia #####
-prop.table(table(ilicitas12m$D2_01))
+round(prop.table(table(ilicitas12m$D2_03)),1)*100
 
 ilicitas12m$D2_03 = relevel(as.factor(ilicitas12m$D2_03), ref = "6")
 ilicitas12m$D2_05 = relevel(as.factor(ilicitas12m$D2_05), ref = "5")
@@ -133,16 +134,16 @@ ilicitas12m$D2_01 = relevel(as.factor(ilicitas12m$D2_01), ref = "9")
 # Modelo base
 #fit0 = glm(Mari ~ CEDAD + SEXO , family = "binomial", weights = FEX_C, data = ilicitas12m)
 
-fit0 = glm(Mari ~ CEDAD + SEXO , family = "binomial", data = ilicitas12m)
+fit0.m = glm(Mari ~ CEDAD + SEXO , family = "binomial", data = ilicitas12m)
 fit0.c = glm(Coca ~ CEDAD + SEXO , family = "binomial", data = ilicitas12m)
 
-AIC0 = AIC(fit0)
+AIC0.m = AIC(fit0.m)
 AIC0.c = AIC(fit0.c)
 
 # Ignorar D_03, D_04, D_05, D_07,D_12A, G_01_A, G_02_A, G_06
 # pendiente D_11
 # probar al final: D2_06, D2_07, G_04
-fit.s = glm(Mari ~ SEXO+CEDAD+PARENTESCO+D_01+D_02+D_06+D_08+D_09+D_10+D_12_A+D_12_B+D_12_C
+fit.m.s = glm(Mari ~ SEXO+CEDAD+PARENTESCO+D_01+D_02+D_06+D_08+D_09+D_10+D_12_A+D_12_B+D_12_C
                + D2_01+D2_03+D2_04+D2_05
                + TIPO+SERVICIO+CESTRATO+TOTAL_PERSONAS
                + G_01+G_02+G_03+G_05+G_07+G_09 + D2_06+D2_07+G_04,
@@ -155,23 +156,23 @@ fit.c.s = glm(Coca ~ SEXO+CEDAD+PARENTESCO+D_01+D_02+D_06+D_08+D_09+D_10+D_12_A+
               family = "binomial",data = ilicitas12m, control = list(maxit = 1000))
 
 # Seleccion de variables
-model.f <- stepCriterion(fit.s, criterion = "aic", direction = "forward", force.in = fit0)
-model.b <- stepCriterion(fit.s, criterion = "aic",direction = "backward", force.out = fit0)
+model.m.f <- stepCriterion(fit.m.s, criterion = "aic", direction = "forward", force.in = fit0.m)
+model.m.b <- stepCriterion(fit.m.s, criterion = "aic",direction = "backward", force.out = fit0.m)
 
 model.c.f <- stepCriterion(fit.c.s, criterion = "aic", direction = "forward", force.in = fit0.c)
 restric = list(keep = c("SEXO","CEDAD"))
 model.c.b <- stepCriterion(fit.c.s, criterion = "aic",direction = "backward", restrictions = restric)
 
 # estimación de modelos
-fit.f = glm(Mari ~ CEDAD + SEXO + G_04 + G_03 + G_02 + G_05 + G_09 + G_01 + D2_03
+fit.m.f = glm(Mari ~ CEDAD + SEXO + G_04 + G_03 + G_02 + G_05 + G_09 + G_01 + D2_03
                  + G_07 + D2_06 + D_02 + D_09 + TIPO + D_06 + D2_05 + CESTRATO,
          family = "binomial",data = ilicitas12m, control = list(maxit = 1000))
-summary(fit.f)
+summary(fit.m.f)
 
-fit.b = glm(Mari ~ SEXO + CEDAD + D_02 + D_09 + D2_03 + D2_05 + CESTRATO + TOTAL_PERSONAS
+fit.m.b = glm(Mari ~ SEXO + CEDAD + D_02 + D_09 + D2_03 + D2_05 + CESTRATO + TOTAL_PERSONAS
                  + G_01 + G_02 + G_03 + G_05 + G_07 + G_09 + D2_06 + D2_07 + G_04,
             family = "binomial",data = ilicitas12m, control = list(maxit = 1000))
-summary(fit.b)
+summary(fit.m.b)
 
 fit.c.f = glm(Coca ~ CEDAD + SEXO + G_04 + G_03 + G_02 + D_09 + G_01 + G_07 + D_06
                    + D_12_C + D2_03 + D2_06 + G_09 + D2_05 + D2_01 + G_05,
@@ -181,14 +182,14 @@ summary(fit.c.f)
 fit.c.b = glm(Coca ~ CEDAD + SEXO + D_06 + D_09 + D_12_C + D2_03 + D2_05 + G_01 + G_02
                    + G_03 + G_05 + G_07 + G_09 + D2_06 + D2_07 + G_04,
             family = "binomial",data = ilicitas12m, control = list(maxit = 1000))
-stepCriterion(fit.c.b, criterion = "aic", direction = "forward", force.in = fit0.c)
+#stepCriterion(fit.c.b, criterion = "aic", direction = "forward", force.in = fit0.c)
 summary(fit.c.b)
 
 # Selección de modelo por AIC
-AIC(fit0,fit.f,fit.b)       # fit.f
-AIC(fit0.c,fit.c.f,fit.c.b) #  fit.c.f
+AIC(fit0.m, fit.m.f, fit.m.b) # fit.f
+AIC(fit0.c, fit.c.f, fit.c.b) #  fit.c.f
 
-fit.m = fit.f
+fit.m = fit.m.f
 fit.c = fit.c.f
 
 summary(fit.m)
@@ -204,7 +205,6 @@ plot(dcm, type="h", xlab="Observation Index", ylab="Cook’s Distance")
 residuals2(fit.m, type = "pearson", plot.it = TRUE)
 #summary(fit.m$residuals)
 #View(cbind(ilicitas12m$Mari, fit.m$fitted.values, fit.m$residuals))
-# WTF
 envelope(fit.m, type = "pearson", plot.it = TRUE)
 
 residuals2(fit.m, type = "deviance", plot.it = TRUE)
@@ -243,7 +243,6 @@ plot(dcm.c, type="h", xlab="Observation Index", ylab="Cook’s Distance")
 #### Residuales
 residuals2(fit.c, type = "pearson", plot.it = TRUE)
 #summary(fit.c$residuals)
-# WTF
 envelope(fit.c, type = "pearson", plot.it = TRUE)
 
 residuals2(fit.c, type = "deviance", plot.it = TRUE)
